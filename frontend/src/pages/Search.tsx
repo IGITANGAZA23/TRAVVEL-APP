@@ -181,12 +181,12 @@ export default function Search() {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Popular Routes</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { from: 'Kampala', to: 'Mbarara', price: '25,000' },
-              { from: 'Kampala', to: 'Gulu', price: '30,000' },
-              { from: 'Kampala', to: 'Jinja', price: '15,000' },
-              { from: 'Mbarara', to: 'Kabale', price: '20,000' },
-              { from: 'Kampala', to: 'Fort Portal', price: '25,000' },
-              { from: 'Kampala', to: 'Masaka', price: '18,000' }
+              { from: 'Kigali', to: 'Huye', price: '3700' },
+              { from: 'Huye', to: 'Kigali', price: '3700' },
+              { from: 'Musanze', to: 'Kigali', price: '2400' },
+              { from: 'Rubavu', to: 'Kigali', price: '4950'},
+              { from: 'Muhanga', to: 'Kigali', price: '2100' },
+              { from: 'Kigali', to: 'Rubavu', price: '4950' }
             ].map((route, index) => (
               <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-4">

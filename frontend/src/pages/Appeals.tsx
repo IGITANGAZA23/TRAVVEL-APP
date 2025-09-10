@@ -258,16 +258,16 @@ export default function Appeals() {
                     {[
                       {
                         id: 'mock1',
-                        route: 'Kampala → Mbarara',
-                        currentTime: '10:00',
-                        desiredTime: '08:00',
+                        route: 'Kigali → Huye',
+                        currentTime: '11:00',
+                        desiredTime: '10:00',
                         reason: 'Need to arrive earlier for important meeting'
                       },
                       {
                         id: 'mock2',
-                        route: 'Kampala → Gulu',
-                        currentTime: '07:00',
-                        desiredTime: '09:00',
+                        route: 'Kigali → Huye',
+                        currentTime: '11:30',
+                        desiredTime: '10:00',
                         reason: 'Flight delay, need later departure'
                       }
                     ].map((mockAppeal, index) => (
@@ -300,10 +300,6 @@ export default function Appeals() {
                         </CardContent>
                       </Card>
                     ))}
-                    
-                    <div className="text-center py-4 text-gray-500 text-sm">
-                      Real-time appeal matching will be available soon
-                    </div>
                   </div>
                 </CardContent>
               </Card>

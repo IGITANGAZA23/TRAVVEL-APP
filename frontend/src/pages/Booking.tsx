@@ -97,10 +97,10 @@ export default function Booking() {
 
   return (
     <Layout>
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-6 max-w-4xl mx-auto bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Complete Your Booking</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-slate-800">Complete Your Booking</h1>
+          <p className="text-slate-600 mt-2">
             Review details and add passengers for your journey
           </p>
         </div>
@@ -111,8 +111,8 @@ export default function Booking() {
             {/* Route Details */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Bus className="mr-2 h-5 w-5" />
+                <CardTitle className="flex items-center text-slate-800">
+                  <Bus className="mr-2 h-5 w-5 text-slate-600" />
                   Route Details
                 </CardTitle>
               </CardHeader>
@@ -122,19 +122,19 @@ export default function Booking() {
                     <h3 className="text-xl font-semibold">
                       {selectedRoute.from} → {selectedRoute.to}
                     </h3>
-                    <Badge variant="secondary">{selectedRoute.busType}</Badge>
+                    <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200">{selectedRoute.busType}</Badge>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 text-gray-400" />
+                      <Clock className="mr-2 h-4 w-4 text-slate-400" />
                       <div>
                         <p className="font-medium">Departure</p>
                         <p>{selectedRoute.departureTime}</p>
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 text-gray-400" />
+                      <Clock className="mr-2 h-4 w-4 text-slate-400" />
                       <div>
                         <p className="font-medium">Arrival</p>
                         <p>{selectedRoute.arrivalTime}</p>
@@ -145,7 +145,7 @@ export default function Booking() {
                   <div className="flex items-center justify-between pt-4 border-t">
                     <span className="text-lg font-medium">Agency: {selectedRoute.agency}</span>
                     <div className="flex items-center">
-                      <Users className="mr-1 h-4 w-4 text-gray-400" />
+                      <Users className="mr-1 h-4 w-4 text-slate-400" />
                       <span className="text-sm">{selectedRoute.availableSeats} seats available</span>
                     </div>
                   </div>
@@ -157,18 +157,19 @@ export default function Booking() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Passengers</CardTitle>
+                  <CardTitle className="text-slate-800">Passengers</CardTitle>
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={addPassenger}
                     disabled={passengers.length >= 5}
+                    className="border-slate-300 text-slate-700 hover:bg-slate-50"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Add Passenger
                   </Button>
                 </div>
-                <CardDescription>
+                <CardDescription className="text-slate-600">
                   Add up to 5 passengers for this booking
                 </CardDescription>
               </CardHeader>
@@ -193,7 +194,7 @@ export default function Booking() {
                           variant="ghost"
                           size="sm"
                           onClick={() => removePassenger(index)}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -207,8 +208,8 @@ export default function Booking() {
             {/* Payment Method */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CreditCard className="mr-2 h-5 w-5" />
+                <CardTitle className="flex items-center text-slate-800">
+                  <CreditCard className="mr-2 h-5 w-5 text-slate-600" />
                   Payment Method
                 </CardTitle>
               </CardHeader>
@@ -224,9 +225,9 @@ export default function Booking() {
                         <SelectItem key={method.id} value={method.id}>
                           <div className="flex items-center space-x-3">
                             <span>{paymentMethodLabels[method.type]}</span>
-                            <span className="text-gray-500">({method.identifier})</span>
+                            <span className="text-slate-500">({method.identifier})</span>
                             {method.isDefault && (
-                              <Badge variant="secondary" className="text-xs">Default</Badge>
+                              <Badge className="bg-slate-100 text-slate-700 text-xs">Default</Badge>
                             )}
                           </div>
                         </SelectItem>
@@ -240,9 +241,9 @@ export default function Booking() {
 
           {/* Booking Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-6">
+            <Card className="sticky top-6 bg-white border border-slate-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Booking Summary</CardTitle>
+                <CardTitle className="text-slate-800">Booking Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -271,7 +272,7 @@ export default function Booking() {
                 <div className="border-t pt-4">
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total Amount:</span>
-                    <span className="text-green-600">
+                    <span className="text-slate-700 font-bold">
                       RWF {totalAmount.toLocaleString()}
                     </span>
                   </div>
@@ -280,13 +281,13 @@ export default function Booking() {
                 <Button 
                   onClick={handleBooking} 
                   disabled={isBooking || passengers.filter(name => name.trim() !== '').length === 0}
-                  className="w-full"
+                  className="w-full bg-slate-700 hover:bg-slate-800 text-white border-0"
                   size="lg"
                 >
                   {isBooking ? 'Processing...' : `Book ${passengers.filter(name => name.trim() !== '').length} Ticket(s)`}
                 </Button>
 
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-slate-500 text-center">
                   You will receive QR codes for all tickets after successful payment
                 </p>
               </CardContent>
