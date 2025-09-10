@@ -22,16 +22,21 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true
+  origin: 'http://localhost:5173', // Update this to your frontend URL
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(morgan('dev'));
 
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI as string);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    await mongoose.connect(process.env.MONGODB_URI as string);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+      console.log(`MongoDB Connected: ${mongoose.connection.host}`);
+    });
   } catch (error) {
     console.error(`Error: ${(error as Error).message}`);
     process.exit(1);
