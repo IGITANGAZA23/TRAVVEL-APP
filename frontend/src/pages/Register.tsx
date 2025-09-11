@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Mail, Phone, Eye, EyeOff, User, CreditCard } from 'lucide-react';
 import { z } from 'zod';
+import { api, API_CONFIG } from '@/services/api';
+import { AuthResponse, ApiError } from '@/types/api';
 
 // Form validation schemas
 const emailSchema = z.object({
@@ -129,10 +131,21 @@ export default function Register() {
         paymentMethod: 'cash' // Default payment method
       };
       
-      await register(userData);
+      // Call the register API with proper typing
+      const response = await api.post<AuthResponse>(
+        API_CONFIG.ENDPOINTS.AUTH.REGISTER,
+        userData
+      );
+      
+      // Store the token
+      localStorage.setItem('travvel_auth_token', response.token);
       
       toast.success('Registration successful! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => {
+        // Clear the token after registration as we want users to log in
+        localStorage.removeItem('travvel_auth_token');
+        navigate('/login');
+      }, 2000);
     } catch (error: unknown) {
       console.error('Registration error:', error);
       let errorMessage = 'Registration failed. Please try again.';
