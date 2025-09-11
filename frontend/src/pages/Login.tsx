@@ -12,20 +12,21 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    identifier: '',
+    password: '',
+    usePhone: false
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password) {
+    if (!formData.identifier || !formData.password) {
       toast.error('Please fill in all fields');
       return;
     }
 
     try {
-      await login(formData.email, formData.password);
+      await login(formData.identifier, formData.password, formData.usePhone);
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error) {
@@ -34,9 +35,18 @@ export default function Login() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const toggleLoginMethod = () => {
+    setFormData(prev => ({
+      ...prev,
+      usePhone: !prev.usePhone,
+      identifier: '' // Clear the identifier when switching methods
     }));
   };
 
@@ -64,14 +74,25 @@ export default function Login() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="identifier">
+                    {formData.usePhone ? 'Phone Number' : 'Email'}
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={toggleLoginMethod}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    {formData.usePhone ? 'Use email instead' : 'Use phone instead'}
+                  </button>
+                </div>
                 <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
+                  id="identifier"
+                  name="identifier"
+                  type={formData.usePhone ? 'tel' : 'email'}
+                  value={formData.identifier}
                   onChange={handleChange}
-                  placeholder="Enter your email"
+                  placeholder={formData.usePhone ? '+256701234567' : 'Enter your email'}
                   required
                 />
               </div>

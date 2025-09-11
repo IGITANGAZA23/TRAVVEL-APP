@@ -60,11 +60,24 @@ export const login = async (req: Request, res: Response) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email, password } = req.body;
+  const { email, phoneNumber, password } = req.body;
+
+  // Validate that either email or phoneNumber is provided
+  if (!email && !phoneNumber) {
+    return res.status(400).json({ message: 'Please provide either email or phone number' });
+  }
 
   try {
+    // Build query based on provided identifier
+    const query: any = {};
+    if (email) {
+      query.email = email;
+    } else if (phoneNumber) {
+      query.phoneNumber = phoneNumber;
+    }
+
     // Check for user
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne(query).select('+password');
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -88,6 +101,8 @@ export const login = async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        phoneNumber: user.phoneNumber,
+        paymentMethods: user.paymentMethods
       },
     });
   } catch (err) {

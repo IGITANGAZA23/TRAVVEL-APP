@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_ENDPOINTS, setAuthToken, getAuthToken } from '../config/api';
 
 interface User {
   id: string;
@@ -54,57 +55,118 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (identifier: string, password: string, usePhone: boolean = false) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Prepare login data based on identifier type
+      const loginData = usePhone 
+        ? { phoneNumber: identifier, password }
+        : { email: identifier, password };
+
+      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed. Please check your credentials and try again.');
+      }
+
+      // Set auth token and user data
+      setAuthToken(data.token);
       
-      // Mock user data
-      const userData: User = {
-        id: '1',
-        email,
-        name: 'Noble Prince',
-        phone: '+250781234567',
-        paymentMethods: [
-          {
-            id: '1',
-            type: 'mtn_mobile_money',
-            identifier: '+256701234567',
-            isDefault: true
-          }
-        ]
+      const userData = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+        phone: data.user.phoneNumber,
+        paymentMethods: data.user.paymentMethods || []
       };
       
       setUser(userData);
       localStorage.setItem('travvel_user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (userData: RegisterData) => {
+  const register = async (userData: RegisterData & { password: string }) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // First, register the user
+      const registerResponse = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: userData.name,
+          email: userData.email,
+          password: userData.password,
+          phoneNumber: userData.phone,
+        }),
+      });
+
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        throw new Error(registerData.message || 'Registration failed');
+      }
+
+      // Auto-login after successful registration
+      const loginResponse = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userData.email,
+          password: userData.password,
+        }),
+      });
+
+      const loginData = await loginResponse.json();
+
+      if (!loginResponse.ok) {
+        // Registration was successful but auto-login failed
+        throw new Error('Registration successful, but automatic login failed. Please log in manually.');
+      }
+
+      // Set auth token and user data
+      setAuthToken(loginData.token);
       
-      const newUser: User = {
-        id: Date.now().toString(),
-        email: userData.email,
-        name: userData.name,
+      const userDataResponse = {
+        id: loginData.user.id,
+        email: loginData.user.email,
+        name: loginData.user.name,
         phone: userData.phone,
-        paymentMethods: [
-          {
-            ...userData.paymentMethod,
-            id: '1',
-            isDefault: true
-          }
-        ]
+        paymentMethods: []
       };
       
-      setUser(newUser);
-      localStorage.setItem('travvel_user', JSON.stringify(newUser));
+      setUser(userDataResponse);
+      localStorage.setItem('travvel_user', JSON.stringify(userDataResponse));
+      
+      // Add payment method if provided (after successful registration and login)
+      if (userData.paymentMethod) {
+        try {
+          await addPaymentMethod(userData.paymentMethod);
+        } catch (error) {
+          console.error('Failed to add payment method:', error);
+          // Don't fail registration if payment method fails
+          toast.error('Account created, but failed to save payment method. You can add it later.');
+        }
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }

@@ -39,6 +39,7 @@ const TicketSchema: Schema = new Schema(
       type: String,
       required: true,
       unique: true,
+      index: true
     },
     qrCode: {
       type: String,
@@ -98,7 +99,6 @@ const TicketSchema: Schema = new Schema(
 
 // Add indexes for better query performance
 TicketSchema.index({ user: 1, status: 1 });
-TicketSchema.index({ ticketNumber: 1 }, { unique: true });
 TicketSchema.index({ 'journeyDetails.departureTime': 1 });
 
 const Ticket = mongoose.model<ITicket>('Ticket', TicketSchema);

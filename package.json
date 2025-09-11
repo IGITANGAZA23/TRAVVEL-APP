@@ -7,7 +7,7 @@
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "client": "cd frontend && npm run dev",
     "server": "cd backend && npm run dev",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "travvel": "concurrently \"cd backend/src && npm run dev\" \"cd frontend && npm run app\"",
     "build": "cd backend && npm run build",
     "start": "node backend/dist/index.js"
   },

@@ -17,16 +17,22 @@ import appealRoutes from './routes/appeals';
 
 // Create Express app
 const app: Application = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Middleware
 app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:5173', // Update this to your frontend URL
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:5173' 
+    : process.env.FRONTEND_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200 // For legacy browser support
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable preflight for all routes
 app.use(morgan('dev'));
 
 // Connect to MongoDB

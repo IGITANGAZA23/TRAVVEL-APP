@@ -11,26 +11,33 @@ import { useBooking } from '@/contexts/BookingContext';
 import Layout from '@/components/Layout';
 import { Bus, Clock, Users, CreditCard, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { AddPaymentMethod } from '@/components/AddPaymentMethod';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 export default function Booking() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, addPaymentMethod } = useAuth();
   const { bookTicket } = useBooking();
   
   const selectedRoute = location.state?.selectedRoute;
   const [passengers, setPassengers] = useState([user?.name || '']);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [isBooking, setIsBooking] = useState(false);
+  const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
+  const [isAddingPayment, setIsAddingPayment] = useState(false);
 
   useEffect(() => {
     if (!selectedRoute) {
       navigate('/search');
       return;
     }
-    if (user?.paymentMethods.length > 0) {
+    // Initialize payment method selection if user has payment methods
+    if (user?.paymentMethods?.length > 0) {
       const defaultMethod = user.paymentMethods.find(pm => pm.isDefault);
-      setSelectedPaymentMethod(defaultMethod?.id || user.paymentMethods[0].id);
+      setSelectedPaymentMethod(defaultMethod?.id || user.paymentMethods[0]?.id || '');
+    } else {
+      setSelectedPaymentMethod('');
     }
   }, [selectedRoute, navigate, user]);
 
@@ -56,6 +63,26 @@ export default function Booking() {
     setPassengers(updated);
   };
 
+  type PaymentMethodType = 'mtn_mobile_money' | 'airtel_money' | 'mastercard' | 'visa';
+
+  const handleAddPaymentMethod = async (method: { type: string; identifier: string; isDefault: boolean }) => {
+    try {
+      setIsAddingPayment(true);
+      await addPaymentMethod({
+        type: method.type as PaymentMethodType,
+        identifier: method.identifier,
+        isDefault: method.isDefault
+      });
+      toast.success('Payment method added successfully');
+      setShowAddPaymentMethod(false);
+    } catch (error) {
+      console.error('Failed to add payment method:', error);
+      toast.error('Failed to add payment method. Please try again.');
+    } finally {
+      setIsAddingPayment(false);
+    }
+  };
+
   const handleBooking = async () => {
     const validPassengers = passengers.filter(name => name.trim() !== '');
     
@@ -64,7 +91,13 @@ export default function Booking() {
       return;
     }
 
-    if (!selectedPaymentMethod) {
+    if (!selectedPaymentMethod && user?.paymentMethods?.length === 0) {
+      toast.error('Please add a payment method to continue');
+      setShowAddPaymentMethod(true);
+      return;
+    }
+    
+    if (!selectedPaymentMethod && user?.paymentMethods?.length > 0) {
       toast.error('Please select a payment method');
       return;
     }
@@ -216,24 +249,54 @@ export default function Booking() {
               <CardContent>
                 <div className="space-y-4">
                   <Label>Select Payment Method</Label>
-                  <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose payment method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {user.paymentMethods.map((method) => (
-                        <SelectItem key={method.id} value={method.id}>
-                          <div className="flex items-center space-x-3">
-                            <span>{paymentMethodLabels[method.type]}</span>
-                            <span className="text-slate-500">({method.identifier})</span>
-                            {method.isDefault && (
-                              <Badge className="bg-slate-100 text-slate-700 text-xs">Default</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {user?.paymentMethods?.length > 0 ? (
+                    <>
+                      <Select 
+                        value={selectedPaymentMethod} 
+                        onValueChange={setSelectedPaymentMethod}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose payment method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {user.paymentMethods.map((method) => (
+                            <SelectItem key={method.id} value={method.id}>
+                              <div className="flex items-center space-x-3">
+                                <span>{paymentMethodLabels[method.type]}</span>
+                                <span className="text-slate-500">({method.identifier})</span>
+                                {method.isDefault && (
+                                  <Badge className="bg-slate-100 text-slate-700 text-xs">Default</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex justify-end">
+                        <Button 
+                          variant="link" 
+                          className="text-sm text-blue-600 p-0 h-auto"
+                          onClick={() => setShowAddPaymentMethod(true)}
+                        >
+                          + Add New Payment Method
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 border border-dashed rounded-lg text-center">
+                        <p className="text-sm text-slate-600 mb-3">No payment methods found</p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => setShowAddPaymentMethod(true)}
+                          className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Payment Method
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -295,6 +358,16 @@ export default function Booking() {
           </div>
         </div>
       </div>
+
+      {/* Add Payment Method Dialog */}
+      <Dialog open={showAddPaymentMethod} onOpenChange={setShowAddPaymentMethod}>
+        <DialogContent className="sm:max-w-[425px]">
+          <AddPaymentMethod 
+            onClose={() => setShowAddPaymentMethod(false)}
+            onAdd={handleAddPaymentMethod}
+          />
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
