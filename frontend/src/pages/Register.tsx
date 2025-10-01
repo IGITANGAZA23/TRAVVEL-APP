@@ -6,36 +6,43 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import type { RegisterData } from '@/contexts/types';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Mail, Phone, Eye, EyeOff, User, CreditCard } from 'lucide-react';
+import { Loader2, Mail, Phone, Eye, EyeOff, User, CreditCard } from 'lucide-react';
 import { z } from 'zod';
-import { api, API_CONFIG } from '@/services/api';
-import { AuthResponse, ApiError } from '@/types/api';
+import Logo from '@/components/Logo';
+// Removed direct API client usage; we will use AuthContext.register instead
 
 // Form validation schemas
-const emailSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
-  loginIdentifier: z.literal('email'),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
+
+const paymentMethodSchema = z.object({
+  type: z.enum(['mtn_mobile_money', 'airtel_money', 'mastercard', 'visa']),
+  identifier: z.string().min(10, 'Please enter a valid payment identifier'),
+  isDefault: z.boolean()
 });
 
-const phoneSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().min(10, 'Please enter a valid phone number'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
-  loginIdentifier: z.literal('phone'),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const formSchema = z
+  .object({
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    email: z.string().email('Invalid email address'),
+    phone: z.string().optional(),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+    paymentMethod: paymentMethodSchema,
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
-type FormData = z.infer<typeof emailSchema> | z.infer<typeof phoneSchema>;
+type FormData = z.infer<typeof formSchema>;
 
 export default function Register() {
   const navigate = useNavigate();
@@ -46,43 +53,47 @@ export default function Register() {
     phone: '',
     password: '',
     confirmPassword: '',
-    loginIdentifier: 'email',
+    paymentMethod: {
+      type: 'mtn_mobile_money',
+      identifier: '',
+      isDefault: true,
+    },
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const paymentTypes = [
-    { value: 'mtn_mobile_money', label: 'MTN Mobile Money', icon: '📱' },
-    { value: 'airtel_money', label: 'Airtel Money', icon: '📱' },
-    { value: 'mastercard', label: 'MasterCard', icon: '💳' },
-    { value: 'visa', label: 'Visa', icon: '💳' }
-  ];
+  
 
-  // Clear errors when switching between email and phone
   useEffect(() => {
-    setErrors({});
-  }, [formData.loginIdentifier]);
+
+  }, []);
 
   const validateForm = (): boolean => {
     try {
-      const schema = formData.loginIdentifier === 'email' ? emailSchema : phoneSchema;
-      schema.parse(formData);
+      formSchema.parse(formData);
       setErrors({});
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
         error.errors.forEach(err => {
-          const path = err.path[0] as string;
-          newErrors[path] = err.message;
+          const [p0, p1] = err.path as (string | number)[];
+          if (p0 === 'paymentMethod' && p1 === 'identifier') {
+            newErrors['paymentIdentifier'] = err.message;
+          } else if (typeof p0 === 'string') {
+            newErrors[p0] = err.message;
+          }
         });
         setErrors(newErrors);
         
         // Scroll to first error
         const firstError = error.errors[0];
-        const element = document.querySelector(`[name="${firstError.path[0]}"]`);
+        const firstKey = Array.isArray(firstError.path) && firstError.path[0] === 'paymentMethod' && firstError.path[1] === 'identifier'
+          ? 'paymentIdentifier'
+          : (firstError.path[0] as string);
+        const element = document.querySelector(`[name="${firstKey}"]`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -101,70 +112,32 @@ export default function Register() {
     setIsSubmitting(true);
     
     try {
-      // Validate email format if provided
-      if (formData.loginIdentifier === 'email' && formData.email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData.email)) {
-          setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      // Validate phone format if provided
-      if (formData.loginIdentifier === 'phone' && formData.phone) {
-        const phoneRegex = /^\+?[0-9\s-]{8,}$/;
-        if (!phoneRegex.test(formData.phone)) {
-          setErrors(prev => ({ ...prev, phone: 'Please enter a valid phone number' }));
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      
-      // Ensure we only send the fields that match the RegisterData interface
-      const userData = {
+      // Ensure we only send the fields that match the AuthContext RegisterData
+      const userData: RegisterData = {
         name: formData.name,
-        email: formData.loginIdentifier === 'email' ? formData.email : '',
-        phone: formData.loginIdentifier === 'phone' ? formData.phone : '',
+        email: formData.email,
+        phone: formData.phone || '',
         password: formData.password,
-        // Add default payment method if required
-        paymentMethod: 'cash' // Default payment method
+        paymentMethod: {
+          type: formData.paymentMethod.type,
+          identifier: formData.paymentMethod.identifier,
+          isDefault: true,
+        },
       };
-      
-      // Call the register API with proper typing
-      const response = await api.post<AuthResponse>(
-        API_CONFIG.ENDPOINTS.AUTH.REGISTER,
-        userData
-      );
-      
-      // Store the token
-      localStorage.setItem('travvel_auth_token', response.token);
-      
-      toast.success('Registration successful! Redirecting to login...');
-      setTimeout(() => {
-        // Clear the token after registration as we want users to log in
-        localStorage.removeItem('travvel_auth_token');
-        navigate('/login');
-      }, 2000);
+
+      await register(userData);
+
+      toast.success('Registration successful! Redirecting...');
+      navigate('/login');
     } catch (error: unknown) {
       console.error('Registration error:', error);
-      let errorMessage = 'Registration failed. Please try again.';
-      
-      if (error && typeof error === 'object' && 'response' in error) {
-        const response = (error as { response?: { data?: { message?: string } } }).response;
-        errorMessage = response?.data?.message || errorMessage;
-      }
-      
-      if (typeof errorMessage === 'string') {
-        if (errorMessage.toLowerCase().includes('email')) {
-          setErrors(prev => ({ ...prev, email: errorMessage }));
-        } else if (errorMessage.toLowerCase().includes('phone')) {
-          setErrors(prev => ({ ...prev, phone: errorMessage }));
-        } else {
-          toast.error(errorMessage);
-        }
+      const message = error instanceof Error ? error.message : 'Registration failed. Please try again.';
+      if (message.toLowerCase().includes('email')) {
+        setErrors((prev) => ({ ...prev, email: message }));
+      } else if (message.toLowerCase().includes('phone')) {
+        setErrors((prev) => ({ ...prev, phone: message }));
       } else {
-        toast.error('An unexpected error occurred');
+        toast.error(message);
       }
     } finally {
       setIsSubmitting(false);
@@ -188,33 +161,13 @@ export default function Register() {
     }
   };
   
-  const toggleIdentifier = () => {
-    setFormData(prev => ({
-      ...prev,
-      loginIdentifier: prev.loginIdentifier === 'email' ? 'phone' : 'email',
-      email: prev.loginIdentifier === 'email' ? '' : prev.email,
-      phone: prev.loginIdentifier === 'phone' ? '' : prev.phone,
-    }));
-  };
+  // Removed email/phone identifier toggle: backend login requires email.
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="bg-white p-3 rounded-full shadow-lg">
-              <img 
-                src="/logo.svg" 
-                alt="TRAVVEL" 
-                className="h-12 w-auto"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.onerror = null;
-                  target.src = 'https://via.placeholder.com/48';
-                }}
-              />
-            </div>
-          </div>
+          <Logo showText size="md" className="justify-center mb-4" />
           <h2 className="text-3xl font-extrabold text-gray-900">Create your account</h2>
           <p className="mt-2 text-sm text-gray-600">
             Already have an account?{' '}
@@ -257,76 +210,53 @@ export default function Register() {
 
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-gray-700">
-                  Sign up with {formData.loginIdentifier === 'email' ? 'email' : 'phone'}
+                  Sign up with email
                 </Label>
-                <button
-                  type="button"
-                  onClick={toggleIdentifier}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors flex items-center"
-                >
-                  {formData.loginIdentifier === 'email' ? (
-                    <>
-                      <Phone className="h-4 w-4 mr-1" />
-                      Use phone
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="h-4 w-4 mr-1" />
-                      Use email
-                    </>
-                  )}
-                </button>
+              </div>
+              {/* Email (required) */}
+              <div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
+                    placeholder="you@example.com"
+                  />
+                </div>
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                )}
               </div>
 
-              {formData.loginIdentifier === 'email' ? (
-                <div>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={formData.email}
-                      onChange={handleChange}
-                      className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
-                      placeholder="you@example.com"
-                    />
+              {/* Phone (optional) */}
+              <div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone className="h-5 w-5 text-gray-400" />
                   </div>
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                  )}
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className={`pl-10 ${errors.phone ? 'border-red-500' : ''}`}
+                    placeholder="Optional: 0781234567"
+                  />
                 </div>
-              ) : (
-                <div>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Phone className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      autoComplete="tel"
-                      required
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className={`pl-10 ${errors.phone ? 'border-red-500' : ''}`}
-                      placeholder="0781234567"
-                    />
-                  </div>
-                  {errors.phone ? (
-                    <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
-                  ) : (
-                    <p className="mt-1 text-xs text-gray-500">
-                      We'll send a verification code to this number
-                    </p>
-                  )}
-                </div>
-              )}
+                {errors.phone && (
+                  <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                )}
+              </div>
 
               <div>
                 <div className="relative">
@@ -366,7 +296,10 @@ export default function Register() {
                     ) : (
                       <Eye className="h-5 w-5 text-gray-400 hover:text-gray-500" />
                     )}
+                    
                   </button>
+
+
                 </div>
                 {errors.password ? (
                   <p className="mt-1 text-sm text-red-600">{errors.password}</p>
@@ -419,6 +352,70 @@ export default function Register() {
                 </div>
                 {errors.confirmPassword && (
                   <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                )}
+              </div>
+
+              {/* Payment Method */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Payment Method</Label>
+                <Select
+                  value={formData.paymentMethod.type}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      paymentMethod: {
+                        ...prev.paymentMethod,
+                        type: value as (typeof prev.paymentMethod)['type'],
+                      },
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      { value: 'mtn_mobile_money', label: 'MTN Mobile Money', icon: '📱' },
+                      { value: 'airtel_money', label: 'Airtel Money', icon: '📱' },
+                      { value: 'mastercard', label: 'MasterCard', icon: '💳' },
+                      { value: 'visa', label: 'Visa', icon: '💳' },
+                    ].map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.icon} {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <CreditCard className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="paymentIdentifier"
+                    name="paymentIdentifier"
+                    type="text"
+                    value={formData.paymentMethod.identifier}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        paymentMethod: {
+                          ...prev.paymentMethod,
+                          identifier: e.target.value,
+                        },
+                      }))
+                    }
+                    className={`pl-10 ${errors.paymentIdentifier ? 'border-red-500' : ''}`}
+                    placeholder={
+                      formData.paymentMethod.type.includes('money')
+                        ? 'Phone number for mobile money (e.g., 0781234567)'
+                        : 'Card number'
+                    }
+                    required
+                  />
+                </div>
+                {errors.paymentIdentifier && (
+                  <p className="mt-1 text-sm text-red-600">{errors.paymentIdentifier}</p>
                 )}
               </div>
 

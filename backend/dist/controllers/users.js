@@ -5,9 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.updateUser = exports.getUser = exports.getUsers = void 0;
 const User_1 = __importDefault(require("../models/User"));
-// @desc    Get all users (admin only)
-// @route   GET /api/users
-// @access  Private/Admin
 const getUsers = async (req, res) => {
     try {
         const users = await User_1.default.find().select('-password');
@@ -46,9 +43,6 @@ const getUser = async (req, res) => {
     }
 };
 exports.getUser = getUser;
-// @desc    Update user (admin only)
-// @route   PUT /api/users/:id
-// @access  Private/Admin
 const updateUser = async (req, res) => {
     try {
         const { name, email, role, isVerified } = req.body;
@@ -80,9 +74,6 @@ const updateUser = async (req, res) => {
     }
 };
 exports.updateUser = updateUser;
-// @desc    Delete user (admin only)
-// @route   DELETE /api/users/:id
-// @access  Private/Admin
 const deleteUser = async (req, res) => {
     try {
         const user = await User_1.default.findById(req.params.id);
@@ -92,7 +83,6 @@ const deleteUser = async (req, res) => {
                 message: 'User not found',
             });
         }
-        // Prevent deleting own account
         if (user._id.toString() === req.user._id.toString()) {
             return res.status(400).json({
                 success: false,

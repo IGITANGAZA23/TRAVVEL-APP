@@ -112,11 +112,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         passengers: passengers.map(name => ({
           name: name.trim(),
           age: 25, // Default age, can be made configurable
-          seatNumber: Math.floor(Math.random() * 50) + 1 // Random seat number
+          gender: 'other' as const,
+          seatNumber: String(Math.floor(Math.random() * 50) + 1) // Random seat number as string
         })),
         totalAmount: route.price * passengers.length,
         paymentId: paymentMethodId,
-        paymentStatus: 'completed'
+        paymentStatus: 'paid'
       };
 
       const response = await fetch('/api/bookings', {

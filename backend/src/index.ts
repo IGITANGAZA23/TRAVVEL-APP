@@ -39,7 +39,7 @@ app.use(morgan('dev'));
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI as string);
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server is running on http://localhost:${PORT}`);
       console.log(`MongoDB Connected: ${mongoose.connection.host}`);
     });
@@ -74,9 +74,8 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
-      console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-    });
+    // Server is started in connectDB after a successful DB connection
+    console.log(`Server initialized in ${process.env.NODE_ENV} mode`);
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

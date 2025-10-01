@@ -6,11 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 ,Eye, EyeOff} from 'lucide-react';
+import Logo from '@/components/Logo';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
@@ -53,10 +55,14 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        <div className="flex justify-center mb-4">
+          <Logo showText size="md" />
+        </div>
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="mb-6"
+          className="mb-6 bg-white border border-slate-200 text-slate-700 hover:bg-sidebar-primary hover:text-white hover:border-sidebar-primary transition-colors rounded-lg shadow-sm"
+          aria-label="Back to Home"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
@@ -108,6 +114,18 @@ export default function Login() {
                   placeholder="Enter your password"
                   required
                 />
+
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                    )}
+                  </button>
               </div>
 
               <Button 

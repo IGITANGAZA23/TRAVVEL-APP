@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import Ticket from '../models/Ticket';
 import { IUserRequest } from '../types/express';
+import crypto from 'crypto';
 
 // @desc    Get all tickets for logged in user
 // @route   GET /api/tickets
@@ -51,6 +52,76 @@ export const getTicket = async (req: IUserRequest, res: Response) => {
       success: true,
       data: ticket,
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// @desc    Scan and verify ticket via signed QR payload
+// @route   POST /api/tickets/scan
+// @access  Private (For staff/admin)
+export const scanTicket = async (req: IUserRequest, res: Response) => {
+  try {
+    const { qr } = req.body as { qr?: string };
+    if (!qr) {
+      return res.status(400).json({ success: false, message: 'QR payload is required' });
+    }
+
+    // Decode base64url payload
+    let payloadObj: any;
+    try {
+      const jsonStr = Buffer.from(qr, 'base64url').toString('utf8');
+      payloadObj = JSON.parse(jsonStr);
+    } catch {
+      return res.status(400).json({ success: false, message: 'Invalid QR payload' });
+    }
+
+    const { tn, uid, exp, sig } = payloadObj || {};
+    if (!tn || !uid || !exp || !sig) {
+      return res.status(400).json({ success: false, message: 'QR payload missing fields' });
+    }
+
+    // Verify signature
+    const secret = process.env.QR_SECRET || 'change_me_in_env';
+    const unsigned = JSON.stringify({ tn, uid, exp });
+    const expectedSig = crypto.createHmac('sha256', secret).update(unsigned).digest('base64url');
+    if (sig !== expectedSig) {
+      return res.status(400).json({ success: false, message: 'Invalid QR signature' });
+    }
+
+    // Check expiration
+    if (Date.now() > Number(exp)) {
+      return res.status(400).json({ success: false, message: 'QR code expired' });
+    }
+
+    // Find active ticket by ticketNumber
+    const ticket = await Ticket.findOne({ ticketNumber: tn, status: 'active' }).populate('user', 'name email');
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: 'Ticket not found or not active' });
+    }
+
+    // Ensure the QR uid matches the ticket owner
+    if (String((ticket.user as any)?._id) !== String(uid)) {
+      return res.status(400).json({ success: false, message: 'QR does not match ticket owner' });
+    }
+
+    // Validate date is today
+    const today = new Date();
+    const ticketDate = new Date(ticket.journeyDetails.departureTime);
+    if (
+      ticketDate.getDate() !== today.getDate() ||
+      ticketDate.getMonth() !== today.getMonth() ||
+      ticketDate.getFullYear() !== today.getFullYear()
+    ) {
+      return res.status(400).json({ success: false, message: 'Ticket is not valid for today' });
+    }
+
+    // Mark as used
+    ticket.status = 'used';
+    await ticket.save();
+
+    return res.status(200).json({ success: true, data: ticket });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server Error' });

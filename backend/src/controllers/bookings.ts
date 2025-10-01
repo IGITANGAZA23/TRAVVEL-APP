@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator';
 import Booking from '../models/Booking';
 import Ticket from '../models/Ticket';
 import { IUserRequest } from '../types/express';
+import crypto from 'crypto';
 
 // @desc    Create a new booking
 // @route   POST /api/bookings
@@ -45,12 +46,29 @@ export const createBooking = async (req: IUserRequest, res: Response) => {
         const ticketNumber = `TKT-${Date.now()}-${Math.floor(
           Math.random() * 1000
         )}`;
+        // Create signed payload for QR code
+        const secret = process.env.QR_SECRET || 'change_me_in_env';
+        const payload = {
+          tn: ticketNumber,
+          uid: String(req.user._id),
+          // Expiration time (e.g., 7 days) to reduce risk if leaked
+          exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        };
+        const payloadStr = JSON.stringify(payload);
+        const signature = crypto
+          .createHmac('sha256', secret)
+          .update(payloadStr)
+          .digest('base64url');
+        const qrData = Buffer.from(
+          JSON.stringify({ ...payload, sig: signature })
+        ).toString('base64url');
         
         const ticket = new Ticket({
           booking: booking._id,
           user: req.user._id,
           ticketNumber,
-          qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${ticketNumber}`,
+          // Store signed payload (base64url) in qrCode field; frontend will render as QR
+          qrCode: qrData,
           status: 'active',
           journeyDetails: {
             from: route.from,

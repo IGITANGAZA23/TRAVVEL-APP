@@ -12,6 +12,7 @@ import {
   Menu
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import Logo from '@/components/Logo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -74,7 +75,7 @@ const Layout: React.FC<LayoutProps> = ({ children, showNavigation = true }) => {
       {/* Mobile Header */}
       <div className="lg:hidden bg-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-blue-600">TRAVVEL</h1>
+          <Logo size="sm" showText textClassName="text-xl text-sidebar-primary" />
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -95,7 +96,7 @@ const Layout: React.FC<LayoutProps> = ({ children, showNavigation = true }) => {
         <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
           <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4">
-              <h1 className="text-2xl font-bold text-blue-600">TRAVVEL</h1>
+              <Logo size="sm" showText textClassName="text-2xl text-sidebar-primary" />
             </div>
             <div className="mt-8 flex-grow flex flex-col px-4">
               <Navigation />

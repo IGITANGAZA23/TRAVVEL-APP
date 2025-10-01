@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API_ENDPOINTS, setAuthToken, getAuthToken } from '../config/api';
+import { toast } from 'sonner';
+import type { RegisterData } from './types';
 
 interface User {
   id: string;
@@ -18,20 +20,15 @@ interface PaymentMethod {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string, usePhone?: boolean) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   addPaymentMethod: (method: Omit<PaymentMethod, 'id'>) => void;
+  checkAuth: () => Promise<void>;
 }
 
-interface RegisterData {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-  paymentMethod: Omit<PaymentMethod, 'id'>;
-}
+// RegisterData is imported from './types'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -45,14 +42,58 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const checkAuth = async () => {
+    const token = getAuthToken();
+    const storedUser = localStorage.getItem('travvel_user');
+    
+    if (!token || !storedUser) {
+      setIsLoading(false);
+      setIsInitialized(true);
+      return;
+    }
+
+    try {
+      // Verify token with server
+      const response = await fetch(API_ENDPOINTS.AUTH.ME, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        const safeName = userData?.name && userData.name.trim().length > 0
+          ? userData.name
+          : (userData?.email ? String(userData.email).split('@')[0] : 'Traveler');
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          name: safeName,
+          phone: userData.phoneNumber,
+          paymentMethods: userData.paymentMethods || []
+        });
+      } else {
+        // If token is invalid, clear auth data
+        localStorage.removeItem('travvel_user');
+        setAuthToken('');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('travvel_user');
+      setAuthToken('');
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+      setIsInitialized(true);
+    }
+  };
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem('travvel_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    checkAuth();
   }, []);
 
   const login = async (identifier: string, password: string, usePhone: boolean = false) => {
@@ -80,10 +121,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set auth token and user data
       setAuthToken(data.token);
       
+      const safeName = data?.user?.name && data.user.name.trim().length > 0
+        ? data.user.name
+        : (data?.user?.email ? String(data.user.email).split('@')[0] : 'Traveler');
       const userData = {
         id: data.user.id,
         email: data.user.email,
-        name: data.user.name,
+        name: safeName,
         phone: data.user.phoneNumber,
         paymentMethods: data.user.paymentMethods || []
       };
@@ -98,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (userData: RegisterData & { password: string }) => {
+  const register = async (userData: RegisterData) => {
     setIsLoading(true);
     try {
       // First, register the user
@@ -121,39 +165,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(registerData.message || 'Registration failed');
       }
 
-      // Auto-login after successful registration
-      const loginResponse = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: userData.email,
-          password: userData.password,
-        }),
-      });
+      // Auto-login after successful registration using provided identifier
+      const identifier = userData.email && userData.email.trim().length > 0
+        ? userData.email
+        : userData.phone;
+      const usePhone = !(userData.email && userData.email.trim().length > 0);
+      await login(identifier, userData.password, usePhone);
 
-      const loginData = await loginResponse.json();
-
-      if (!loginResponse.ok) {
-        // Registration was successful but auto-login failed
-        throw new Error('Registration successful, but automatic login failed. Please log in manually.');
-      }
-
-      // Set auth token and user data
-      setAuthToken(loginData.token);
-      
-      const userDataResponse = {
-        id: loginData.user.id,
-        email: loginData.user.email,
-        name: loginData.user.name,
-        phone: userData.phone,
-        paymentMethods: []
-      };
-      
-      setUser(userDataResponse);
-      localStorage.setItem('travvel_user', JSON.stringify(userDataResponse));
-      
       // Add payment method if provided (after successful registration and login)
       if (userData.paymentMethod) {
         try {
@@ -175,6 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('travvel_user');
+    setAuthToken('');
   };
 
   const addPaymentMethod = (method: Omit<PaymentMethod, 'id'>) => {
@@ -194,14 +213,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value = {
-    user,
-    login,
-    register,
-    logout,
-    isLoading,
-    addPaymentMethod
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{
+      user, 
+      login, 
+      register, 
+      logout, 
+      isLoading, 
+      addPaymentMethod,
+      checkAuth 
+    }}>
+      {isInitialized ? children : null}
+    </AuthContext.Provider>
+  );
 };

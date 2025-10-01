@@ -121,9 +121,7 @@ const getBooking = async (req, res) => {
     }
 };
 exports.getBooking = getBooking;
-// @desc    Update booking status
-// @route   PUT /api/bookings/:id/status
-// @access  Private
+
 const updateBookingStatus = async (req, res) => {
     try {
         const { status } = req.body;
@@ -155,9 +153,7 @@ const updateBookingStatus = async (req, res) => {
     }
 };
 exports.updateBookingStatus = updateBookingStatus;
-// @desc    Delete booking
-// @route   DELETE /api/bookings/:id
-// @access  Private
+
 const deleteBooking = async (req, res) => {
     try {
         const booking = await Booking_1.default.findOne({

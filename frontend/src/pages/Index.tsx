@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bus, Clock, Shield, Smartphone, Users, Zap } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -46,9 +47,9 @@ export default function Index() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center space-y-8">
           <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900">
-              <span className="text-slate-700">TRAVVEL</span>
-            </h1>
+            <div className="flex justify-center">
+              <Logo showText size="lg" />
+            </div>
             <p className="text-xl md:text-2xl text-gray-600 font-medium">
               Your seat, your schedule
             </p>

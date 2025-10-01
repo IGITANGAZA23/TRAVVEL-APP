@@ -20,6 +20,10 @@ export default function Dashboard() {
 
   if (!user) return null;
 
+  const displayName = user.name && user.name.trim().length > 0
+    ? user.name
+    : (user.email ? user.email.split('@')[0] : 'Traveler');
+
   const tickets = getUserTickets();
   const activeTickets = tickets.filter(t => t.status === 'active').length;
   const appealedTickets = tickets.filter(t => t.status === 'appealed').length;
@@ -53,7 +57,7 @@ export default function Dashboard() {
       <div className="p-6 bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-800">
-            Welcome back, {user.name}!
+            Welcome back, {displayName}!
           </h1>
           <p className="text-slate-600 mt-2">
             Manage your bookings and travel plans from your dashboard

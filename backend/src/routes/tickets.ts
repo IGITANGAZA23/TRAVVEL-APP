@@ -5,6 +5,7 @@ import {
   getTicket,
   updateTicketStatus,
   verifyTicket,
+  scanTicket,
 } from '../controllers/tickets';
 import { protect, authorize } from '../middleware/auth';
 
@@ -49,6 +50,13 @@ router.get(
   ],
   authorize('admin', 'staff'),
   verifyTicket
+);
+
+// Scan ticket via signed QR payload (for staff/admin)
+router.post(
+  '/scan',
+  authorize('admin', 'staff'),
+  scanTicket
 );
 
 export default router;
