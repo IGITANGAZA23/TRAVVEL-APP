@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export const API_ENDPOINTS = {
   AUTH: {
@@ -6,7 +6,23 @@ export const API_ENDPOINTS = {
     LOGIN: `${API_BASE_URL}/auth/login`,
     ME: `${API_BASE_URL}/auth/me`,
   },
-  // Add other API endpoints here as needed
+  BOOKINGS: {
+    ROOT: `${API_BASE_URL}/bookings`,
+    ONE: (id: string) => `${API_BASE_URL}/bookings/${id}`,
+    STATUS: (id: string) => `${API_BASE_URL}/bookings/${id}/status`,
+  },
+  TICKETS: {
+    ROOT: `${API_BASE_URL}/tickets`,
+    ONE: (id: string) => `${API_BASE_URL}/tickets/${id}`,
+    STATUS: (id: string) => `${API_BASE_URL}/tickets/${id}/status`,
+    VERIFY: (ticketNumber: string) => `${API_BASE_URL}/tickets/verify/${ticketNumber}`,
+    SCAN: `${API_BASE_URL}/tickets/scan`,
+  },
+  APPEALS: {
+    ROOT: `${API_BASE_URL}/appeals`,
+    ONE: (id: string) => `${API_BASE_URL}/appeals/${id}`,
+    ADMIN_ALL: `${API_BASE_URL}/appeals/admin/all`,
+  },
 };
 
 export const setAuthToken = (token: string) => {

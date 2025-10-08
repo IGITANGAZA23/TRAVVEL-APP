@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { param, query } from 'express-validator';
+import { param, query, body } from 'express-validator';
 import {
   getTickets,
   getTicket,
@@ -37,7 +37,7 @@ router.put(
   '/:id/status',
   [
     param('id', 'Please provide a valid ticket ID').isMongoId(),
-    query('status', 'Status is required').isIn(['active', 'used', 'cancelled']),
+    body('status', 'Status is required').isIn(['active', 'used', 'cancelled']),
   ],
   updateTicketStatus
 );

@@ -64,17 +64,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (response.ok) {
-        const userData = await response.json();
-        const safeName = userData?.name && userData.name.trim().length > 0
+        const payload = await response.json();
+        const userData = payload?.data || payload; // support both shapes
+        const safeName = userData?.name && String(userData.name).trim().length > 0
           ? userData.name
           : (userData?.email ? String(userData.email).split('@')[0] : 'Traveler');
-        setUser({
-          id: userData.id,
-          email: userData.email,
+        const normalized = {
+          id: String(userData.id || userData._id),
+          email: String(userData.email || ''),
           name: safeName,
-          phone: userData.phoneNumber,
-          paymentMethods: userData.paymentMethods || []
-        });
+          phone: String(userData.phoneNumber || ''),
+          paymentMethods: Array.isArray(userData.paymentMethods) ? userData.paymentMethods : []
+        };
+        setUser(normalized);
+        localStorage.setItem('travvel_user', JSON.stringify(normalized));
       } else {
         // If token is invalid, clear auth data
         localStorage.removeItem('travvel_user');

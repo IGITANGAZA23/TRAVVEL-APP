@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { mockRoutes } from '@/data/mockRoutes';
+import { API_ENDPOINTS, getAuthToken } from '@/config/api';
 
 export interface Route {
   id: string;
@@ -67,14 +68,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const mockRoutesData = mockRoutes;
 
   const searchRoutes = async (from: string, to: string, date: string): Promise<Route[]> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const filteredRoutes = mockRoutesData.filter(route => 
+    // TODO: Replace mock filter with real search endpoint when available
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const filteredRoutes = mockRoutesData.filter(route =>
       route.from.toLowerCase().includes(from.toLowerCase()) &&
       route.to.toLowerCase().includes(to.toLowerCase())
     );
-    
     setRoutes(filteredRoutes);
     return filteredRoutes;
   };
@@ -120,11 +119,11 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         paymentStatus: 'paid'
       };
 
-      const response = await fetch('/api/bookings', {
+      const response = await fetch(API_ENDPOINTS.BOOKINGS.ROOT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${getAuthToken()}`
         },
         body: JSON.stringify(bookingData)
       });
@@ -134,7 +133,8 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         throw new Error(error.message || 'Failed to book tickets');
       }
 
-      const { tickets: newTickets } = await response.json();
+      const { data } = await response.json();
+      const newTickets = data?.tickets || [];
       
       // Update local state with the new tickets
       setTickets(prev => [...prev, ...newTickets]);
@@ -153,7 +153,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Return the new tickets with route details
       return (newTickets as TicketResponse[]).map(ticket => ({
         ...ticket,
-        route, // Include the full route details
+        route,
         routeId: route.id,
         fromTicket: {
           ...ticket,
@@ -180,16 +180,16 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     try {
-      const response = await fetch('/api/appeals', {
+      const response = await fetch(API_ENDPOINTS.APPEALS.ROOT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${getAuthToken()}`
         },
         body: JSON.stringify({
           ticketId,
-          desiredTime,
-          reason
+          subject: `Change request to ${desiredTime}`,
+          description: reason
         })
       });
 
@@ -198,7 +198,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         throw new Error(error.message || 'Failed to create appeal');
       }
 
-      const newAppeal = await response.json();
+      const { data: newAppeal } = await response.json();
       
       // Update local state
       setAppeals(prev => [...prev, newAppeal]);

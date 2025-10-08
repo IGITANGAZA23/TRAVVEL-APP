@@ -6,9 +6,14 @@ interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'staff';
   phoneNumber?: string;
   isVerified: boolean;
+  paymentMethods?: Array<{
+    type: 'mtn_mobile_money' | 'mastercard' | 'visa' | 'airtel_money';
+    identifier: string;
+    isDefault: boolean;
+  }>;
   createdAt: Date;
   matchPassword: (enteredPassword: string) => Promise<boolean>;
   getSignedJwtToken: () => string;
@@ -38,13 +43,31 @@ const UserSchema: Schema = new Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'staff'],
     default: 'user'
   },
   phoneNumber: {
     type: String,
     maxlength: [20, 'Phone number can not be longer than 20 characters']
   },
+  paymentMethods: [
+    {
+      type: {
+        type: String,
+        enum: ['mtn_mobile_money', 'airtel_money', 'mastercard', 'visa'],
+        required: true
+      },
+      identifier: {
+        type: String,
+        required: true,
+        trim: true
+      },
+      isDefault: {
+        type: Boolean,
+        default: false
+      }
+    }
+  ],
   isVerified: {
     type: Boolean,
     default: false
