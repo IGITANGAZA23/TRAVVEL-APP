@@ -3,7 +3,7 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
     if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-    desc = { enumerable: true, get: function() { return m[k]; } };
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
     Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
@@ -49,6 +49,7 @@ const TicketSchema = new mongoose_1.Schema({
         type: String,
         required: true,
         unique: true,
+        index: true
     },
     qrCode: {
         type: String,
@@ -105,7 +106,6 @@ const TicketSchema = new mongoose_1.Schema({
 });
 // Add indexes for better query performance
 TicketSchema.index({ user: 1, status: 1 });
-TicketSchema.index({ ticketNumber: 1 }, { unique: true });
 TicketSchema.index({ 'journeyDetails.departureTime': 1 });
 const Ticket = mongoose_1.default.model('Ticket', TicketSchema);
 exports.default = Ticket;

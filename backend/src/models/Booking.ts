@@ -8,6 +8,7 @@ interface IBooking extends Document {
     departureTime: Date;
     arrivalTime: Date;
   };
+  routeId?: string; // Reference to the route in available tickets
   passengers: Array<{
     name: string;
     age: number;
@@ -18,6 +19,7 @@ interface IBooking extends Document {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   paymentStatus: 'pending' | 'paid' | 'refunded' | 'failed';
   paymentId?: string;
+  tickets?: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +87,14 @@ const BookingSchema: Schema = new Schema(
     paymentId: {
       type: String,
     },
+    routeId: {
+      type: String,
+      required: false,
+    },
+    tickets: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Ticket',
+    }],
   },
   {
     timestamps: true,

@@ -18,10 +18,12 @@ router.get('/:id', [
 // Update ticket status
 router.put('/:id/status', [
     (0, express_validator_1.param)('id', 'Please provide a valid ticket ID').isMongoId(),
-    (0, express_validator_1.query)('status', 'Status is required').isIn(['active', 'used', 'cancelled']),
+    (0, express_validator_1.body)('status', 'Status is required').isIn(['active', 'used', 'cancelled']),
 ], tickets_1.updateTicketStatus);
 // Verify ticket (for staff/admin)
 router.get('/verify/:ticketNumber', [
     (0, express_validator_1.param)('ticketNumber', 'Ticket number is required').not().isEmpty(),
 ], (0, auth_1.authorize)('admin', 'staff'), tickets_1.verifyTicket);
+// Scan ticket via signed QR payload (for staff/admin)
+router.post('/scan', (0, auth_1.authorize)('admin', 'staff'), tickets_1.scanTicket);
 exports.default = router;

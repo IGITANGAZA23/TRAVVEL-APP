@@ -25,6 +25,11 @@ export const API_ENDPOINTS = {
   },
   ROUTES: {
     ROOT: `${API_BASE_URL}/routes`,
+    SEARCH: `${API_BASE_URL}/routes/search`,
+    BY_ID: (id: string) => `${API_BASE_URL}/routes/${id}`,
+    BY_ORIGIN_DESTINATION: (from: string, to: string) => `${API_BASE_URL}/routes/from/${from}/to/${to}`,
+    ORIGINS: `${API_BASE_URL}/routes/origins`,
+    DESTINATIONS: `${API_BASE_URL}/routes/destinations`,
   }
 };
 

@@ -14,6 +14,7 @@ import Booking from './pages/Booking';
 import MyTickets from './pages/MyTickets';
 import TicketDetail from './pages/TicketDetail';
 import Appeals from './pages/Appeals';
+import ApiTest from './pages/ApiTest';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const AppContent = () => {
         <Route path="/my-tickets" element={<MyTickets />} />
         <Route path="/ticket/:id" element={<TicketDetail />} />
         <Route path="/appeals" element={<Appeals />} />
+        <Route path="/api-test" element={<ApiTest />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

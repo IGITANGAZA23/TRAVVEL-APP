@@ -34,52 +34,16 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const AppealSchema = new mongoose_1.Schema({
-    user: {
-        type: mongoose_1.default.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
-    ticket: {
-        type: mongoose_1.default.Schema.Types.ObjectId,
-        ref: 'Ticket',
-        required: true,
-    },
-    subject: {
-        type: String,
-        required: [true, 'Please add a subject'],
-        trim: true,
-        maxlength: [100, 'Subject cannot be more than 100 characters'],
-    },
-    description: {
-        type: String,
-        required: [true, 'Please add a description'],
-        trim: true,
-        maxlength: [1000, 'Description cannot be more than 1000 characters'],
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'in_review', 'resolved', 'rejected'],
-        default: 'pending',
-    },
-    response: {
-        type: String,
-        trim: true,
-        maxlength: [1000, 'Response cannot be more than 1000 characters'],
-    },
-    resolvedBy: {
-        type: mongoose_1.default.Schema.Types.ObjectId,
-        ref: 'User',
-    },
-    resolvedAt: {
-        type: Date,
-    },
-}, {
-    timestamps: true,
-});
-// Add indexes for better query performance
-AppealSchema.index({ user: 1, status: 1 });
-AppealSchema.index({ ticket: 1 });
-AppealSchema.index({ status: 1 });
-const Appeal = mongoose_1.default.model('Appeal', AppealSchema);
-exports.default = Appeal;
+const RouteSchema = new mongoose_1.Schema({
+    from: { type: String, required: true, trim: true },
+    to: { type: String, required: true, trim: true },
+    agency: { type: String, required: true, trim: true },
+    departureTime: { type: String, required: true },
+    arrivalTime: { type: String, required: true },
+    price: { type: Number, required: true, min: 0 },
+    availableSeats: { type: Number, required: true, min: 0 },
+    busType: { type: String, required: true, default: 'Standard' },
+}, { timestamps: true });
+RouteSchema.index({ from: 1, to: 1 });
+const RouteModel = mongoose_1.default.model('Route', RouteSchema);
+exports.default = RouteModel;

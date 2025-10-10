@@ -18,6 +18,14 @@ export const API_CONFIG = {
     APPEALS: {
       BASE: '/appeals',
       BY_ID: (id: string) => `/appeals/${id}`
+    },
+    ROUTES: {
+      BASE: '/routes',
+      SEARCH: '/routes/search',
+      BY_ID: (id: string) => `/routes/${id}`,
+      BY_ORIGIN_DESTINATION: (from: string, to: string) => `/routes/from/${from}/to/${to}`,
+      ORIGINS: '/routes/origins',
+      DESTINATIONS: '/routes/destinations'
     }
   },
   // Timeout for API requests in milliseconds
