@@ -104,6 +104,37 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Route-specific methods
+  public async getRoutes(): Promise<any> {
+    return this.get('/api/routes');
+  }
+
+  public async searchRoutes(filters: Record<string, any>): Promise<any> {
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+    return this.get(`/api/routes/search?${queryParams.toString()}`);
+  }
+
+  public async getRouteById(id: string): Promise<any> {
+    return this.get(`/api/routes/${id}`);
+  }
+
+  public async getRoutesByOriginDestination(from: string, to: string): Promise<any> {
+    return this.get(`/api/routes/from/${from}/to/${to}`);
+  }
+
+  public async getOrigins(): Promise<any> {
+    return this.get('/api/routes/origins');
+  }
+
+  public async getDestinations(): Promise<any> {
+    return this.get('/api/routes/destinations');
+  }
 }
 
 export const api = new ApiService();

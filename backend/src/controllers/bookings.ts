@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator';
 import Booking from '../models/Booking';
 import Ticket from '../models/Ticket';
 import { IUserRequest } from '../types/express';
+import availableTicketsService from '../services/availableTicketsService';
 import crypto from 'crypto';
 
 // @desc    Create a new booking
@@ -16,12 +17,28 @@ export const createBooking = async (req: IUserRequest, res: Response) => {
 
   try {
     const {
-      route,
+      routeId,
       passengers,
       totalAmount,
       paymentStatus = 'pending',
       paymentId,
     } = req.body;
+
+    // Validate route exists and has enough seats
+    const route = availableTicketsService.getRouteById(routeId);
+    if (!route) {
+      return res.status(404).json({
+        success: false,
+        message: 'Route not found'
+      });
+    }
+
+    if (route.availableSeats < passengers.length) {
+      return res.status(400).json({
+        success: false,
+        message: `Only ${route.availableSeats} seats available, but ${passengers.length} passengers requested`
+      });
+    }
 
     // Create booking
     const booking = new Booking({
@@ -36,13 +53,24 @@ export const createBooking = async (req: IUserRequest, res: Response) => {
       totalAmount,
       paymentStatus,
       paymentId,
+      routeId: route.id, // Store the route ID for reference
     });
 
     await booking.save();
 
+    // Update available seats before creating tickets
+    const seatUpdateSuccess = availableTicketsService.updateAvailableSeats(routeId, passengers.length);
+    if (!seatUpdateSuccess) {
+      await booking.remove(); // Rollback booking if seat update fails
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to reserve seats. Please try again.'
+      });
+    }
+
     // Create tickets for each passenger
     const tickets = await Promise.all(
-      passengers.map(async (passenger: any) => {
+      passengers.map(async (passenger: any, index: number) => {
         const ticketNumber = `TKT-${Date.now()}-${Math.floor(
           Math.random() * 1000
         )}`;
@@ -75,7 +103,7 @@ export const createBooking = async (req: IUserRequest, res: Response) => {
             to: route.to,
             departureTime: route.departureTime,
             arrivalTime: route.arrivalTime,
-            seatNumber: passenger.seatNumber,
+            seatNumber: passenger.seatNumber || `SEAT-${index + 1}`,
           },
           passenger: {
             name: passenger.name,
@@ -99,6 +127,15 @@ export const createBooking = async (req: IUserRequest, res: Response) => {
       data: {
         booking,
         tickets,
+        route: {
+          id: route.id,
+          from: route.from,
+          to: route.to,
+          agency: route.agency,
+          departureTime: route.departureTime,
+          arrivalTime: route.arrivalTime,
+          busType: route.busType
+        }
       },
     });
   } catch (err) {
@@ -218,6 +255,12 @@ export const deleteBooking = async (req: IUserRequest, res: Response) => {
         success: false,
         message: 'Cannot delete a booking that is not in pending status',
       });
+    }
+
+    // Return seats to available tickets if routeId exists
+    if ((booking as any).routeId) {
+      const seatsToReturn = booking.passengers.length;
+      availableTicketsService.addAvailableSeats((booking as any).routeId, seatsToReturn);
     }
 
     // Delete associated tickets

@@ -7,18 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBooking } from '@/contexts/BookingContext';
 import Layout from '@/components/Layout';
 import { Bus, Clock, Users, CreditCard, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AddPaymentMethod } from '@/components/AddPaymentMethod';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { api } from '@/services/api';
 
 export default function Booking() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, addPaymentMethod } = useAuth();
-  const { bookTicket } = useBooking();
   
   const selectedRoute = location.state?.selectedRoute;
   const travelDate: string | undefined = location.state?.travelDate;
@@ -119,17 +118,30 @@ export default function Booking() {
         return dt.toISOString();
       };
 
-      const normalizedRoute = {
-        ...selectedRoute,
-        departureTime: toISO(selectedRoute.departureTime),
-        arrivalTime: toISO(selectedRoute.arrivalTime)
+      const bookingData = {
+        routeId: selectedRoute.id,
+        passengers: validPassengers.map((name, index) => ({
+          name: name.trim(),
+          age: 25, // Default age, could be made configurable
+          gender: 'other' as const,
+          seatNumber: `SEAT-${index + 1}`
+        })),
+        totalAmount: validPassengers.length * selectedRoute.price,
+        paymentStatus: 'pending',
+        paymentId: selectedPaymentMethod
       };
 
-      const tickets = await bookTicket(normalizedRoute, validPassengers, selectedPaymentMethod);
-      toast.success(`Successfully booked ${tickets.length} ticket(s)!`);
-      navigate('/my-tickets');
-    } catch (error) {
-      toast.error('Failed to book tickets. Please try again.');
+      const response = await api.post('/api/bookings', bookingData);
+      
+      if (response.success) {
+        toast.success(`Successfully booked ${response.data.tickets.length} ticket(s)!`);
+        navigate('/my-tickets');
+      } else {
+        throw new Error(response.message || 'Booking failed');
+      }
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      toast.error(error.message || 'Failed to book tickets. Please try again.');
     } finally {
       setIsBooking(false);
     }

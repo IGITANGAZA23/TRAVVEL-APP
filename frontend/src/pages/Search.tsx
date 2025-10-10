@@ -4,15 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useBooking } from '@/contexts/BookingContext';
 import Layout from '@/components/Layout';
 import { Search as SearchIcon, MapPin, Clock, Users, Bus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { api } from '@/services/api';
 
 export default function Search() {
   const navigate = useNavigate();
-  const { searchRoutes, routes } = useBooking();
+  const [routes, setRoutes] = useState<any[]>([]);
   const [searchForm, setSearchForm] = useState({
     from: '',
     to: '',
@@ -30,12 +30,18 @@ export default function Search() {
 
     setIsSearching(true);
     try {
-      const results = await searchRoutes(searchForm.from, searchForm.to, searchForm.date);
-      if (results.length === 0) {
+      const response = await api.getRoutesByOriginDestination(searchForm.from, searchForm.to);
+      if (response.success && response.data.length > 0) {
+        setRoutes(response.data);
+        toast.success(`Found ${response.data.length} route(s)`);
+      } else {
+        setRoutes([]);
         toast.info('No routes found for your search criteria');
       }
     } catch (error) {
+      console.error('Search error:', error);
       toast.error('Failed to search routes. Please try again.');
+      setRoutes([]);
     } finally {
       setIsSearching(false);
     }
@@ -181,12 +187,12 @@ export default function Search() {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Popular Routes</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { from: 'Kigali', to: 'Huye', price: '3700' },
-              { from: 'Huye', to: 'Kigali', price: '3700' },
-              { from: 'Musanze', to: 'Kigali', price: '2400' },
-              { from: 'Rubavu', to: 'Kigali', price: '4950'},
-              { from: 'Muhanga', to: 'Kigali', price: '2100' },
-              { from: 'Kigali', to: 'Rubavu', price: '4950' }
+              { from: 'Huye', to: 'Kigali', price: '2500' },
+              { from: 'Kigali', to: 'Musanze', price: '3500' },
+              { from: 'Kigali', to: 'Rubavu', price: '4000' },
+              { from: 'Muhanga', to: 'Huye', price: '800' },
+              { from: 'Kigali', to: 'Nyagatare', price: '3000' },
+              { from: 'Kigali', to: 'Karongi', price: '4500' }
             ].map((route, index) => (
               <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
@@ -195,7 +201,14 @@ export default function Search() {
                       <h3 className="font-medium">{route.from} → {route.to}</h3>
                       <p className="text-sm text-gray-600">Starting from RWF {route.price}</p>
                     </div>
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setSearchForm(prev => ({ ...prev, from: route.from, to: route.to }));
+                        handleSearch({ preventDefault: () => {} } as React.FormEvent);
+                      }}
+                    >
                       Search
                     </Button>
                   </div>
