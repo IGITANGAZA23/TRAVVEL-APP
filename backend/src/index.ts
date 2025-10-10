@@ -14,6 +14,8 @@ import userRoutes from './routes/users';
 import bookingRoutes from './routes/bookings';
 import ticketRoutes from './routes/tickets';
 import appealRoutes from './routes/appeals';
+import routeRoutes from './routes/routes';
+import RouteModel from './models/Route';
 
 // Create Express app
 const app: Application = express();
@@ -43,6 +45,17 @@ const connectDB = async () => {
       console.log(`Server is running on http://localhost:${PORT}`);
       console.log(`MongoDB Connected: ${mongoose.connection.host}`);
     });
+
+    // Seed default routes if none exist
+    const routeCount = await RouteModel.countDocuments();
+    if (routeCount === 0) {
+      await RouteModel.insertMany([
+        { from: 'Kigali', to: 'Nyamasheke', agency: 'Ritco Ltd', departureTime: '12:00', arrivalTime: '18:00', price: 6000, availableSeats: 15, busType: 'Executive' },
+        { from: 'Kigali', to: 'Bugesera', agency: 'Volcano Express', departureTime: '09:30', arrivalTime: '11:00', price: 1200, availableSeats: 32, busType: 'Standard' },
+        { from: 'Kigali', to: 'Kayonza', agency: 'Kigali Coach', departureTime: '16:00', arrivalTime: '18:00', price: 2000, availableSeats: 22, busType: 'Standard' },
+      ]);
+      console.log('Seeded default routes');
+    }
   } catch (error) {
     console.error(`Error: ${(error as Error).message}`);
     process.exit(1);
@@ -55,6 +68,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/appeals', appealRoutes);
+app.use('/api/routes', routeRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {

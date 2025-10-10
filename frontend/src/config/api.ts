@@ -23,6 +23,9 @@ export const API_ENDPOINTS = {
     ONE: (id: string) => `${API_BASE_URL}/appeals/${id}`,
     ADMIN_ALL: `${API_BASE_URL}/appeals/admin/all`,
   },
+  ROUTES: {
+    ROOT: `${API_BASE_URL}/routes`,
+  }
 };
 
 export const setAuthToken = (token: string) => {

@@ -21,6 +21,7 @@ export default function Booking() {
   const { bookTicket } = useBooking();
   
   const selectedRoute = location.state?.selectedRoute;
+  const travelDate: string | undefined = location.state?.travelDate;
   const [passengers, setPassengers] = useState([user?.name || '']);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [isBooking, setIsBooking] = useState(false);
@@ -109,7 +110,22 @@ export default function Booking() {
 
     setIsBooking(true);
     try {
-      const tickets = await bookTicket(selectedRoute, validPassengers, selectedPaymentMethod);
+      // Coerce route times to ISO datetimes on the chosen date
+      const toISO = (time: string) => {
+        if (!travelDate) return time;
+        const [hour, minute] = String(time).split(':');
+        const dt = new Date(travelDate);
+        dt.setHours(Number(hour || 0), Number(minute || 0), 0, 0);
+        return dt.toISOString();
+      };
+
+      const normalizedRoute = {
+        ...selectedRoute,
+        departureTime: toISO(selectedRoute.departureTime),
+        arrivalTime: toISO(selectedRoute.arrivalTime)
+      };
+
+      const tickets = await bookTicket(normalizedRoute, validPassengers, selectedPaymentMethod);
       toast.success(`Successfully booked ${tickets.length} ticket(s)!`);
       navigate('/my-tickets');
     } catch (error) {

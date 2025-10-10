@@ -30,8 +30,8 @@ export default function Search() {
 
     setIsSearching(true);
     try {
-      await searchRoutes(searchForm.from, searchForm.to, searchForm.date);
-      if (routes.length === 0) {
+      const results = await searchRoutes(searchForm.from, searchForm.to, searchForm.date);
+      if (results.length === 0) {
         toast.info('No routes found for your search criteria');
       }
     } catch (error) {
@@ -42,7 +42,7 @@ export default function Search() {
   };
 
   const handleBookRoute = (route: { id: string; from: string; to: string; agency: string; departureTime: string; arrivalTime: string; price: number; availableSeats: number; busType: string }) => {
-    navigate('/booking', { state: { selectedRoute: route } });
+    navigate('/booking', { state: { selectedRoute: route, travelDate: searchForm.date } });
   };
 
   return (

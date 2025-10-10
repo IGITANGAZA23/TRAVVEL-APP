@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useBooking } from '@/contexts/BookingContext';
+import { API_ENDPOINTS, getAuthToken } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { Ticket, Clock, MapPin, Bus, QrCode, MessageSquare, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -44,9 +44,10 @@ export default function MyTickets() {
     const fetchTickets = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/bookings/my-tickets', {
+        const url = API_ENDPOINTS.TICKETS.ROOT;
+        const response = await fetch(url, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${getAuthToken()}`,
           },
         });
         
@@ -54,8 +55,26 @@ export default function MyTickets() {
           throw new Error('Failed to fetch tickets');
         }
         
-        const data = await response.json();
-        setTickets(data);
+        const payload = await response.json();
+        const list = payload?.data || [];
+        // Map backend Ticket model to UI shape expected here
+        const mapped = list.map((t: any) => ({
+          id: String(t._id),
+          route: {
+            from: t.journeyDetails?.from,
+            to: t.journeyDetails?.to,
+            agency: 'Agency',
+            departureTime: new Date(t.journeyDetails?.departureTime).toLocaleString(),
+            arrivalTime: new Date(t.journeyDetails?.arrivalTime).toLocaleString(),
+            price: Number(t.price || 0)
+          },
+          passengerName: t.passenger?.name,
+          seatNumber: t.journeyDetails?.seatNumber,
+          bookingDate: t.createdAt,
+          status: t.status,
+          appealable: t.status === 'active'
+        }));
+        setTickets(mapped);
       } catch (error) {
         console.error('Error fetching tickets:', error);
         // Handle error (show toast, etc.)

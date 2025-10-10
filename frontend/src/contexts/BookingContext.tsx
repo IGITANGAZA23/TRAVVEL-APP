@@ -68,14 +68,29 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const mockRoutesData = mockRoutes;
 
   const searchRoutes = async (from: string, to: string, date: string): Promise<Route[]> => {
-    // TODO: Replace mock filter with real search endpoint when available
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const filteredRoutes = mockRoutesData.filter(route =>
-      route.from.toLowerCase().includes(from.toLowerCase()) &&
-      route.to.toLowerCase().includes(to.toLowerCase())
-    );
-    setRoutes(filteredRoutes);
-    return filteredRoutes;
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const url = `${API_ENDPOINTS.ROUTES.ROOT}?${params.toString()}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch routes');
+    }
+    const payload = await response.json();
+    const list = (payload?.data || []) as any[];
+    const mapped: Route[] = list.map((r) => ({
+      id: String(r._id),
+      from: r.from,
+      to: r.to,
+      agency: r.agency,
+      departureTime: r.departureTime,
+      arrivalTime: r.arrivalTime,
+      price: Number(r.price),
+      availableSeats: Number(r.availableSeats),
+      busType: r.busType,
+    }));
+    setRoutes(mapped);
+    return mapped;
   };
 
   interface TicketResponse {
