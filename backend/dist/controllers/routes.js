@@ -5,9 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDestinations = exports.getOrigins = exports.getRoutesByOriginDestination = exports.getRouteById = exports.searchRoutes = exports.listRoutes = void 0;
 const availableTicketsService_1 = __importDefault(require("../services/availableTicketsService"));
-// @desc    Get all available routes
-// @route   GET /api/routes
-// @access  Public
+
 const listRoutes = async (req, res) => {
     try {
         const routes = availableTicketsService_1.default.getAllRoutes();
@@ -24,9 +22,7 @@ const listRoutes = async (req, res) => {
     }
 };
 exports.listRoutes = listRoutes;
-// @desc    Search routes with filters
-// @route   GET /api/routes/search
-// @access  Public
+
 const searchRoutes = async (req, res) => {
     try {
         const { from, to, agency, busType, routeType, maxPrice, minSeats } = req.query;
@@ -59,9 +55,7 @@ const searchRoutes = async (req, res) => {
     }
 };
 exports.searchRoutes = searchRoutes;
-// @desc    Get route by ID
-// @route   GET /api/routes/:id
-// @access  Public
+
 const getRouteById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -83,9 +77,7 @@ const getRouteById = async (req, res) => {
     }
 };
 exports.getRouteById = getRouteById;
-// @desc    Get routes by origin and destination
-// @route   GET /api/routes/from/:from/to/:to
-// @access  Public
+
 const getRoutesByOriginDestination = async (req, res) => {
     try {
         const { from, to } = req.params;
@@ -103,9 +95,7 @@ const getRoutesByOriginDestination = async (req, res) => {
     }
 };
 exports.getRoutesByOriginDestination = getRoutesByOriginDestination;
-// @desc    Get all unique origins
-// @route   GET /api/routes/origins
-// @access  Public
+
 const getOrigins = async (req, res) => {
     try {
         const origins = availableTicketsService_1.default.getOrigins();
@@ -120,9 +110,7 @@ const getOrigins = async (req, res) => {
     }
 };
 exports.getOrigins = getOrigins;
-// @desc    Get all unique destinations
-// @route   GET /api/routes/destinations
-// @access  Public
+
 const getDestinations = async (req, res) => {
     try {
         const destinations = availableTicketsService_1.default.getDestinations();

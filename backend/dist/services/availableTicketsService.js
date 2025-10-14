@@ -9,9 +9,7 @@ class AvailableTicketsService {
     constructor() {
         this.dataPath = path_1.default.join(process.cwd(), 'data', 'available-tickets', 'rwanda-routes.json');
     }
-    /**
-     * Load available tickets data from JSON file
-     */
+
     loadData() {
         try {
             const rawData = fs_1.default.readFileSync(this.dataPath, 'utf8');
@@ -22,9 +20,7 @@ class AvailableTicketsService {
             throw new Error('Failed to load available tickets data');
         }
     }
-    /**
-     * Save available tickets data to JSON file
-     */
+
     saveData(data) {
         try {
             data.metadata.lastUpdated = new Date().toISOString();
@@ -35,31 +31,23 @@ class AvailableTicketsService {
             throw new Error('Failed to save available tickets data');
         }
     }
-    /**
-     * Get all available routes
-     */
+
     getAllRoutes() {
         const data = this.loadData();
         return data.routes;
     }
-    /**
-     * Get routes by origin and destination
-     */
+
     getRoutesByOriginDestination(from, to) {
         const data = this.loadData();
         return data.routes.filter(route => route.from.toLowerCase() === from.toLowerCase() &&
             route.to.toLowerCase() === to.toLowerCase());
     }
-    /**
-     * Get route by ID
-     */
+
     getRouteById(id) {
         const data = this.loadData();
         return data.routes.find(route => route.id === id) || null;
     }
-    /**
-     * Search routes with filters
-     */
+
     searchRoutes(filters) {
         const data = this.loadData();
         return data.routes.filter(route => {
@@ -87,9 +75,7 @@ class AvailableTicketsService {
             return true;
         });
     }
-    /**
-     * Update available seats for a specific route
-     */
+
     updateAvailableSeats(routeId, seatsToBook) {
         const data = this.loadData();
         const route = data.routes.find(r => r.id === routeId);
@@ -103,9 +89,7 @@ class AvailableTicketsService {
         this.saveData(data);
         return true;
     }
-    /**
-     * Add seats back to a route (for cancellations)
-     */
+
     addAvailableSeats(routeId, seatsToAdd) {
         const data = this.loadData();
         const route = data.routes.find(r => r.id === routeId);
@@ -116,32 +100,24 @@ class AvailableTicketsService {
         this.saveData(data);
         return true;
     }
-    /**
-     * Get all unique origins
-     */
+
     getOrigins() {
         const data = this.loadData();
         const origins = new Set(data.routes.map(route => route.from));
         return Array.from(origins).sort();
     }
-    /**
-     * Get all unique destinations
-     */
+
     getDestinations() {
         const data = this.loadData();
         const destinations = new Set(data.routes.map(route => route.to));
         return Array.from(destinations).sort();
     }
-    /**
-     * Get metadata
-     */
+
     getMetadata() {
         const data = this.loadData();
         return data.metadata;
     }
-    /**
-     * Update route data (for admin purposes)
-     */
+
     updateRoute(routeId, updatedRoute) {
         const data = this.loadData();
         const routeIndex = data.routes.findIndex(r => r.id === routeId);
@@ -152,9 +128,7 @@ class AvailableTicketsService {
         this.saveData(data);
         return true;
     }
-    /**
-     * Add new route
-     */
+
     addRoute(newRoute) {
         const data = this.loadData();
         const routeId = `${newRoute.from.toLowerCase()}-${newRoute.to.toLowerCase()}-${Date.now()}`;

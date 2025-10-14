@@ -1,175 +1,152 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.updatePassword = exports.updateDetails = exports.getMe = exports.login = exports.register = void 0;
-const User_1 = __importDefault(require("../models/User"));
-const express_validator_1 = require("express-validator");
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-const register = async (req, res) => {
-    const errors = (0, express_validator_1.validationResult)(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+
+const { validationResult } = require("express-validator");
+const bcrypt = require("bcryptjs");
+const User = require("../models/User");
+
+// ✅ REGISTER
+exports.register = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { name, email, password, phoneNumber } = req.body;
+
+  try {
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ message: "User already exists" });
     }
-    const { name, email, password, phoneNumber } = req.body;
-    try {
-        // Check if user exists
-        let user = await User_1.default.findOne({ email });
-        if (user) {
-            return res.status(400).json({ message: 'User already exists' });
-        }
-        // Create user
-        user = new User_1.default({
-            name,
-            email,
-            password,
-            phoneNumber,
-        });
-        await user.save();
-        // Create token
-        const token = user.getSignedJwtToken();
-        res.status(201).json({
-            success: true,
-            token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-            },
-        });
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
+
+    user = new User({ name, email, password, phoneNumber });
+    await user.save();
+
+    console.log("✅ DEBUG - Saved user password:", user.password);
+
+    const token = user.getSignedJwtToken();
+    return res.status(201).json({
+        success: true,
+        token,
+        user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phoneNumber: user.phoneNumber,
+        },
+    });
+    } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ message: "Server Error" });
     }
 };
-exports.register = register;
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
-const login = async (req, res) => {
-    const errors = (0, express_validator_1.validationResult)(req);
+
+// ✅ LOGIN
+exports.login = async (req, res) => {
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ errors: errors.array() });
     }
+
     const { email, phoneNumber, password } = req.body;
-    // Validate that either email or phoneNumber is provided
+
     if (!email && !phoneNumber) {
-        return res.status(400).json({ message: 'Please provide either email or phone number' });
+    return res.status(400).json({ message: "Please provide email or phone number" });
     }
+
     try {
-        // Build query based on provided identifier
-        const query = {};
-        if (email) {
-            query.email = email;
-        }
-        else if (phoneNumber) {
-            query.phoneNumber = phoneNumber;
-        }
-        // Check for user
-        const user = await User_1.default.findOne(query).select('+password');
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-        // Check if password matches
-        const isMatch = await user.matchPassword(password);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-        // Create token
-        const token = user.getSignedJwtToken();
-        res.status(200).json({
-            success: true,
-            token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                phoneNumber: user.phoneNumber,
-                paymentMethods: user.paymentMethods
-            },
-        });
+    const query = {};
+    if (email) query.email = email.toLowerCase();
+    else if (phoneNumber) query.phoneNumber = phoneNumber;
+
+    const user = await User.findOne(query).select("+password");
+    if (!user) {
+        return res.status(401).json({ message: "Invalid credentials (user not found)" });
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
+
+    // ✅ Recovery: hash plain-text password if stored unhashed.
+    if (user.password && !user.password.startsWith("$2a$")) {
+        console.warn("⚠️ Detected unhashed password — hashing now for safety");
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt);
+        await user.save();
+    }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+        console.log("⚠️ Password mismatch for user:", email || phoneNumber);
+        return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = user.getSignedJwtToken();
+    res.status(200).json({
+        success: true,
+        token,
+        user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phoneNumber: user.phoneNumber,
+        paymentMethods: user.paymentMethods,
+    },
+    });
+    } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server Error" });
     }
 };
-exports.login = login;
-// @desc    Get current logged in user
-// @route   GET /api/auth/me
-// @access  Private
-const getMe = async (req, res) => {
+
+// ✅ GET CURRENT USER
+exports.getMe = async (req, res) => {
     try {
-        const user = await User_1.default.findById(req.user._id).select('-password');
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        res.status(200).json({
-            success: true,
-            data: user,
-        });
+    const user = await User.findById(req.user._id).select("-password");
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
+    res.status(200).json({ success: true, data: user });
+    } catch (err) {
+    console.error("GetMe error:", err);
+    res.status(500).json({ message: "Server Error" });
     }
 };
-exports.getMe = getMe;
-// @desc    Update user details
-// @route   PUT /api/auth/updatedetails
-// @access  Private
-const updateDetails = async (req, res) => {
+
+// ✅ UPDATE DETAILS
+exports.updateDetails = async (req, res) => {
+    try {
     const fieldsToUpdate = {
         name: req.body.name,
         email: req.body.email,
         phoneNumber: req.body.phoneNumber,
     };
-    try {
-        const user = await User_1.default.findByIdAndUpdate(req.user._id, fieldsToUpdate, {
-            new: true,
-            runValidators: true,
-        });
-        res.status(200).json({
-            success: true,
-            data: user,
-        });
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
+    const user = await User.findByIdAndUpdate(req.user._id, fieldsToUpdate, {
+        new: true,
+        runValidators: true,
+    });
+    res.status(200).json({ success: true, data: user });
+    } catch (err) {
+    console.error("Update details error:", err);
+    res.status(500).json({ message: "Server Error" });
     }
 };
-exports.updateDetails = updateDetails;
-// @desc    Update password
-// @route   PUT /api/auth/updatepassword
-// @access  Private
-const updatePassword = async (req, res) => {
+
+// ✅ UPDATE PASSWORD
+exports.updatePassword = async (req, res) => {
     try {
-        const user = await User_1.default.findById(req.user._id).select('+password');
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        // Check current password
-        const isMatch = await user.matchPassword(req.body.currentPassword);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Password is incorrect' });
-        }
-        user.password = req.body.newPassword;
-        await user.save();
-        res.status(200).json({
-            success: true,
-            data: {},
-        });
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await user.matchPassword(req.body.currentPassword);
+    if (!isMatch)
+        return res.status(401).json({ message: "Password is incorrect" });
+
+    user.password = req.body.newPassword;
+    await user.save();
+
+    res.status(200).json({ success: true });
+    } catch (err) {
+    console.error("Update password error:", err);
+    res.status(500).json({ message: "Server Error" });
     }
 };
-exports.updatePassword = updatePassword;

@@ -190,7 +190,7 @@ export default function Search() {
               { from: 'Huye', to: 'Kigali', price: '2500' },
               { from: 'Kigali', to: 'Musanze', price: '3500' },
               { from: 'Kigali', to: 'Rubavu', price: '4000' },
-              { from: 'Muhanga', to: 'Huye', price: '800' },
+              { from: 'Muhanga', to: 'Huye', price: '2800' },
               { from: 'Kigali', to: 'Nyagatare', price: '3000' },
               { from: 'Kigali', to: 'Karongi', price: '4500' }
             ].map((route, index) => (
