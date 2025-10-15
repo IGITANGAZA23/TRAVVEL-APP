@@ -4,7 +4,7 @@ async function testBooking() {
   try {
     console.log('Testing booking endpoint...');
 
-    const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZWRlMzNiZDg2MGRmYTQyOTkwMjNlZSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzYwNDIwNjY4LCJleHAiOjE3NjMwMTI2Njh9.hRzc8vYTpkN3PPE_VcKhluSO--1LbzrDJCgDdTTTyMI";
+    const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZWZkNjhhMWVjOWFmMTZlODU4NDA2YiIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzYwNTQ4NDkwLCJleHAiOjE3NjMxNDA0OTB9.6YbMRYN0LGKV9gKPEamxynd4TUbcX9iPHYED-oFfU_U";
 
 
     // Step 1: Fetch route from server to get exact departure/arrival times
