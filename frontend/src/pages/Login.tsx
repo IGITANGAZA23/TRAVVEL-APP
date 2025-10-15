@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2 ,Eye, EyeOff} from 'lucide-react';
+import { ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
 
 export default function Login() {
@@ -103,29 +103,29 @@ export default function Login() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 relative"> {/* Added relative here */}
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'} // toggle type
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
                   required
                 />
-
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-500" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-500" />
-                    )}
-                  </button>
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center justify-center h-5 w-5"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                  )}
+                </button>
               </div>
 
               <Button 
