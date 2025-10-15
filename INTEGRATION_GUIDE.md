@@ -4,7 +4,7 @@
 
 The available tickets system is now **fully integrated** and **interactive** between frontend and backend. All components are connected and tested successfully.
 
-## 🏗️ What We've Built
+## 🏗️ Done activities
 
 ### 1. **Available Tickets Data System**
 - **Location**: `backend/data/available-tickets/rwanda-routes.json`
