@@ -8,7 +8,7 @@
       "departureTime": "06:00",
       "arrivalTime": "09:00",
       "price": 2500,
-      "availableSeats": 26,
+      "availableSeats": 25,
       "busType": "Executive",
       "routeType": "intercity",
       "duration": "3 hours",
@@ -266,7 +266,7 @@
     }
   ],
   "metadata": {
-    "lastUpdated": "2025-10-15T03:23:42.885Z",
+    "lastUpdated": "2025-10-17T04:56:41.110Z",
     "totalRoutes": 12,
     "availableAgencies": [
       "Ritco Ltd",

@@ -79,11 +79,15 @@ export default function Booking() {
   };
 
   const handleBooking = async () => {
+  
   const validPassengers = passengers.filter(name => name.trim() !== '');
   if (validPassengers.length === 0) {
     toast.error('Please enter at least one passenger name');
     return;
   }
+
+    console.log('Selected route ID:', selectedRoute.id); // <-- log here
+    console.log('Selected route object:', selectedRoute);
 
   if (!selectedPaymentMethod) {
     toast.error('Please select a payment method');
@@ -100,7 +104,15 @@ export default function Booking() {
   try {
     // Correctly nest route object as expected by backend
     const travelDateString = travelDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+
+
+
+
 const bookingData = {
+  
+
+  //original
   route: {
     id: selectedRoute.id,
     from: selectedRoute.from,
@@ -108,6 +120,9 @@ const bookingData = {
     departureTime: `${travelDateString}T${selectedRoute.departureTime}:00`,
     arrivalTime: `${travelDateString}T${selectedRoute.arrivalTime}:00`,
   },
+  
+
+  //routeId: selectedRoute.id,
   passengers: validPassengers.map((name, i) => ({
     name: name.trim(),
     age: 25,
@@ -118,6 +133,10 @@ const bookingData = {
   paymentStatus: 'pending',
   paymentId: selectedPaymentMethod
 };
+
+
+
+
 
 
     console.log('Booking data being sent:', bookingData);

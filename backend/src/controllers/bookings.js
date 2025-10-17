@@ -9,15 +9,19 @@ const Booking_1 = __importDefault(require("../models/Booking"));
 const Ticket_1 = __importDefault(require("../models/Ticket"));
 const availableTicketsService_1 = __importDefault(require("../services/availableTicketsService"));
 const crypto_1 = __importDefault(require("crypto"));
-// @desc    Create a new booking
-// @route   POST /api/bookings
-// @access  Private
+
 const createBooking = async (req, res) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
     try {
+
+
+
+
+/*
+//ORIGINAL ROUTE SEARCHING
         const { routeId, passengers, totalAmount, paymentStatus = 'pending', paymentId, } = req.body;
         // Validate route exists and has enough seats
         const route = availableTicketsService_1.default.getRouteById(routeId);
@@ -27,6 +31,48 @@ const createBooking = async (req, res) => {
                 message: 'Route not found'
             });
         }
+*/
+
+/*
+//NEW ROUTE SEARCHING
+const { route, passengers, totalAmount, paymentStatus = 'pending', paymentId } = req.body;
+const routeId = route?.id; // ✅ extract id from nested route
+const foundRoute = availableTicketsService_1.default.getRouteById(routeId);
+
+if (!foundRoute) {
+    return res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    });
+}
+*/
+
+
+// Extract either nested route or routeId
+const { route, routeId: bodyRouteId, passengers, totalAmount, paymentStatus = 'pending', paymentId } = req.body;
+
+// Determine which route ID to use
+const routeId = bodyRouteId || route?.id;
+if (!routeId) {
+    return res.status(400).json({
+    success: false,
+    message: 'Route ID is required'
+    });
+}
+
+// Lookup the route
+const foundRoute = availableTicketsService_1.default.getRouteById(routeId);
+if (!foundRoute) {
+    return res.status(404).json({
+    success: false,
+    message: 'Route not found'
+    });
+}
+
+
+
+
+
         if (route.availableSeats < passengers.length) {
             return res.status(400).json({
                 success: false,
@@ -125,9 +171,7 @@ const createBooking = async (req, res) => {
     }
 };
 exports.createBooking = createBooking;
-// @desc    Get all bookings for logged in user
-// @route   GET /api/bookings
-// @access  Private
+
 const getBookings = async (req, res) => {
     try {
         const bookings = await Booking_1.default.find({ user: req.user._id })
@@ -145,9 +189,7 @@ const getBookings = async (req, res) => {
     }
 };
 exports.getBookings = getBookings;
-// @desc    Get single booking
-// @route   GET /api/bookings/:id
-// @access  Private
+
 const getBooking = async (req, res) => {
     try {
         const booking = await Booking_1.default.findOne({
@@ -171,9 +213,7 @@ const getBooking = async (req, res) => {
     }
 };
 exports.getBooking = getBooking;
-// @desc    Update booking status
-// @route   PUT /api/bookings/:id/status
-// @access  Private
+
 const updateBookingStatus = async (req, res) => {
     try {
         const { status } = req.body;
@@ -205,9 +245,7 @@ const updateBookingStatus = async (req, res) => {
     }
 };
 exports.updateBookingStatus = updateBookingStatus;
-// @desc    Delete booking
-// @route   DELETE /api/bookings/:id
-// @access  Private
+
 const deleteBooking = async (req, res) => {
     try {
         const booking = await Booking_1.default.findOne({
