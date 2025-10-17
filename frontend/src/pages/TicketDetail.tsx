@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useBooking } from '@/contexts/BookingContext';
 import Layout from '@/components/Layout';
@@ -15,7 +15,7 @@ export default function TicketDetail() {
   const { getUserTickets } = useBooking();
   
   const tickets = getUserTickets();
-  const ticket = tickets.find(t => t.id === id);
+  const ticket = tickets.find(t => t.id === id || t._id === id);
 
   if (!ticket) {
     return (
@@ -85,11 +85,11 @@ export default function TicketDetail() {
               <CardContent className="space-y-4">
                 <div>
                   <h3 className="text-xl font-semibold mb-2">
-                    {ticket.route.from} → {ticket.route.to}
+                    {ticket.route?.from ?? 'Unknown'} → {ticket.route?.to ?? 'Unknown'}
                   </h3>
-                  <p className="text-gray-600">{ticket.route.agency}</p>
+                  <p className="text-gray-600">{ticket.route?.agency ?? 'Unknown Agency'}</p>
                   <Badge variant="secondary" className="mt-2">
-                    {ticket.route.busType}
+                    {ticket.route?.busType ?? 'Standard'}
                   </Badge>
                 </div>
 
@@ -98,14 +98,14 @@ export default function TicketDetail() {
                     <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <p className="font-medium">Departure</p>
-                      <p className="text-gray-600">{ticket.route.departureTime}</p>
+                      <p className="text-gray-600">{ticket.route?.departureTime ?? 'N/A'}</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
                     <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <p className="font-medium">Arrival</p>
-                      <p className="text-gray-600">{ticket.route.arrivalTime}</p>
+                      <p className="text-gray-600">{ticket.route?.arrivalTime ?? 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -125,14 +125,14 @@ export default function TicketDetail() {
                   <User className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="font-medium">Passenger Name</p>
-                    <p className="text-gray-600">{ticket.passengerName}</p>
+                    <p className="text-gray-600">{ticket.passengerName ?? 'Unknown'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <MapPin className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="font-medium">Seat Number</p>
-                    <p className="text-gray-600">{ticket.seatNumber}</p>
+                    <p className="text-gray-600">{ticket.seatNumber ?? 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -140,7 +140,7 @@ export default function TicketDetail() {
                   <div>
                     <p className="font-medium">Booking Date</p>
                     <p className="text-gray-600">
-                      {format(new Date(ticket.bookingDate), 'MMMM dd, yyyy')}
+                      {ticket.bookingDate ? format(new Date(ticket.bookingDate), 'MMMM dd, yyyy') : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export default function TicketDetail() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Ticket Price:</span>
-                    <span className="font-medium">RWF {ticket.route.price.toLocaleString()}</span>
+                    <span className="font-medium">RWF {ticket.route?.price?.toLocaleString() ?? '0'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Booking ID:</span>
@@ -176,7 +176,7 @@ export default function TicketDetail() {
           {/* QR Code */}
           <div className="space-y-6">
             <QRCodeDisplay 
-              qrCode={ticket.qrCode} 
+              qrCode={ticket.qrCode ?? ''} 
               ticketId={ticket.id}
               size={280}
             />
@@ -201,7 +201,7 @@ export default function TicketDetail() {
                   <h4 className="font-medium">Need Help?</h4>
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
                     <Phone className="h-4 w-4" />
-                    <span>Contact agency: {ticket.route.agency}</span>
+                    <span>Contact agency: {ticket.route?.agency ?? 'Unknown Agency'}</span>
                   </div>
                 </div>
               </CardContent>
