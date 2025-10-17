@@ -125,6 +125,10 @@ export default function MyTickets() {
     }
   };
 
+
+
+
+
   const TicketCard = ({ 
     ticket, 
     onAppealClick 
@@ -132,102 +136,110 @@ export default function MyTickets() {
     ticket: TicketType; 
     onAppealClick: (ticket: TicketType) => void; 
   }) => (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center space-x-2 mb-2">
-              <h3 className="text-lg font-semibold">
-                {ticket.route.from} → {ticket.route.to}
-              </h3>
-              <Badge className={getStatusColor(ticket.status)}>
-                {ticket.status}
-              </Badge>
-            </div>
-            <p className="text-gray-600 flex items-center mb-1">
-              <Bus className="mr-2 h-4 w-4" />
-              {ticket.route.agency} • Seat {ticket.seatNumber}
-            </p>
-            <p className="text-gray-600 flex items-center">
-              <MapPin className="mr-2 h-4 w-4" />
-              Passenger: {ticket.passengerName}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-semibold text-green-600">
-              RWF {ticket.route.price.toLocaleString()}
-            </p>
-            <p className="text-sm text-gray-500">
-              Booked: {format(new Date(ticket.bookingDate), 'MMM dd, yyyy')}
-            </p>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-          <div className="flex items-center">
-            <Clock className="mr-2 h-4 w-4 text-gray-400" />
-            <div>
-              <p className="font-medium">Departure</p>
-              <p>{ticket.route.departureTime}</p>
-            </div>
-          </div>
-          <div className="flex items-center">
-            <Clock className="mr-2 h-4 w-4 text-gray-400" />
-            <div>
-              <p className="font-medium">Arrival</p>
-              <p>{ticket.route.arrivalTime}</p>
-            </div>
-          </div>
+//new card with resolved issues 
+<Card className="hover:shadow-lg transition-shadow">
+  <CardContent className="p-6">
+    {/* Header */}
+    <div className="flex items-start justify-between mb-4">
+      <div className="flex-1">
+        <div className="flex items-center space-x-2 mb-2">
+          <h3 className="text-lg font-semibold">
+            {ticket.route.from} → {ticket.route.to}
+          </h3>
+          <Badge className={getStatusColor(ticket.status)}>
+            {ticket.status}
+          </Badge>
         </div>
+        <p className="text-gray-600 flex items-center mb-1">
+          <Bus className="mr-2 h-4 w-4" />
+          {ticket.route.agency} • Seat {ticket.seatNumber}
+        </p>
+        <p className="text-gray-600 flex items-center">
+          <MapPin className="mr-2 h-4 w-4" />
+          Passenger: {ticket.passengerName}
+        </p>
+      </div>
+      <div className="text-right">
+        <p className="text-lg font-semibold text-green-600">
+          RWF {ticket.route.price.toLocaleString()}
+        </p>
+        <p className="text-sm text-gray-500">
+          Booked: {format(new Date(ticket.bookingDate), 'MMM dd, yyyy')}
+        </p>
+      </div>
+    </div>
 
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/ticket/${ticket.id}`)}
-          >
-            <div className="mt-4 flex space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex-1"
-                onClick={() => {
-                  // TODO: Implement QR code view
-                  console.log('View QR code for ticket:', ticket.id);
-                }}
-              >
-                <QrCode className="mr-2 h-4 w-4" /> View QR
-              </Button>
-              
-              {ticket.status === 'active' && ticket.appealable && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => onAppealClick(ticket)}
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" /> 
-                  {ticket.appealStatus ? 'View Appeal' : 'Appeal'}
-                </Button>
-              )}
-              
-              {ticket.appealStatus && (
-                <Badge 
-                  variant="outline" 
-                  className={`ml-2 ${
-                    ticket.appealStatus === 'resolved' ? 'bg-green-100 text-green-800' :
-                    ticket.appealStatus === 'rejected' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}
-                >
-                  {ticket.appealStatus.charAt(0).toUpperCase() + ticket.appealStatus.slice(1)}
-                </Badge>
-              )}
-            </div>  
-          </Button>
+    {/* Departure / Arrival */}
+    <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+      <div className="flex items-center">
+        <Clock className="mr-2 h-4 w-4 text-gray-400" />
+        <div>
+          <p className="font-medium">Departure</p>
+          <p>{ticket.route.departureTime}</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="flex items-center">
+        <Clock className="mr-2 h-4 w-4 text-gray-400" />
+        <div>
+          <p className="font-medium">Arrival</p>
+          <p>{ticket.route.arrivalTime}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Actions */}
+    <div className="flex flex-col sm:flex-row gap-2 mt-2">
+      {/* View QR Button */}
+      <Button
+        variant="outline"
+        className="flex-1"
+        onClick={() => {
+          console.log('View QR code for ticket:', ticket.id);
+          navigate(`/ticket/${ticket.id}`);
+        }}
+      >
+        <QrCode className="mr-2 h-4 w-4" /> View QR
+      </Button>
+
+      {/* Appeal Button */}
+      {ticket.status === 'active' && ticket.appealable && (
+        <Button
+          variant="outline"
+          className="flex-1"
+          onClick={() => onAppealClick(ticket)}
+        >
+          <MessageSquare className="mr-2 h-4 w-4" />
+          {ticket.appealStatus ? 'View Appeal' : 'Appeal'}
+        </Button>
+      )}
+
+      {/* Appeal Status Badge */}
+      {ticket.appealStatus && (
+        <Badge
+          variant="outline"
+          className={`ml-2 ${
+            ticket.appealStatus === 'resolved'
+              ? 'bg-green-100 text-green-800'
+              : ticket.appealStatus === 'rejected'
+              ? 'bg-red-100 text-red-800'
+              : 'bg-yellow-100 text-yellow-800'
+          }`}
+        >
+          {ticket.appealStatus.charAt(0).toUpperCase() +
+            ticket.appealStatus.slice(1)}
+        </Badge>
+      )}
+    </div>
+  </CardContent>
+</Card>
+
+
+
   );
+
+
+  
 
   const renderTicketSection = (ticketList: TicketType[], title: string, emptyMessage: string, icon: React.ReactNode) => (
     <div className="space-y-4">
