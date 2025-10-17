@@ -18,7 +18,7 @@ export default function Booking() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, addPaymentMethod } = useAuth();
-  
+
   const selectedRoute = location.state?.selectedRoute;
   const travelDate: string | undefined = location.state?.travelDate;
   const [passengers, setPassengers] = useState([user?.name || '']);
@@ -27,12 +27,13 @@ export default function Booking() {
   const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
   const [isAddingPayment, setIsAddingPayment] = useState(false);
 
+  // Initialize payment method and check route existence
   useEffect(() => {
     if (!selectedRoute) {
       navigate('/search');
       return;
     }
-    // Initialize payment method selection if user has payment methods
+
     if (user?.paymentMethods?.length > 0) {
       const defaultMethod = user.paymentMethods.find(pm => pm.isDefault);
       setSelectedPaymentMethod(defaultMethod?.id || user.paymentMethods[0]?.id || '');
@@ -41,20 +42,14 @@ export default function Booking() {
     }
   }, [selectedRoute, navigate, user]);
 
-  if (!selectedRoute || !user) {
-    return null;
-  }
+  if (!selectedRoute || !user) return null;
 
   const addPassenger = () => {
-    if (passengers.length < 5) {
-      setPassengers([...passengers, '']);
-    }
+    if (passengers.length < 5) setPassengers([...passengers, '']);
   };
 
   const removePassenger = (index: number) => {
-    if (passengers.length > 1) {
-      setPassengers(passengers.filter((_, i) => i !== index));
-    }
+    if (passengers.length > 1) setPassengers(passengers.filter((_, i) => i !== index));
   };
 
   const updatePassenger = (index: number, name: string) => {
@@ -84,68 +79,68 @@ export default function Booking() {
   };
 
   const handleBooking = async () => {
-    const validPassengers = passengers.filter(name => name.trim() !== '');
-    
-    if (validPassengers.length === 0) {
-      toast.error('Please enter at least one passenger name');
-      return;
-    }
+  const validPassengers = passengers.filter(name => name.trim() !== '');
+  if (validPassengers.length === 0) {
+    toast.error('Please enter at least one passenger name');
+    return;
+  }
 
-    if (!selectedPaymentMethod && user?.paymentMethods?.length === 0) {
-      toast.error('Please add a payment method to continue');
-      setShowAddPaymentMethod(true);
-      return;
-    }
-    
-    if (!selectedPaymentMethod && user?.paymentMethods?.length > 0) {
-      toast.error('Please select a payment method');
-      return;
-    }
+  if (!selectedPaymentMethod) {
+    toast.error('Please select a payment method');
+    return;
+  }
 
-    if (validPassengers.length > selectedRoute.availableSeats) {
-      toast.error(`Only ${selectedRoute.availableSeats} seats available`);
-      return;
+  if (validPassengers.length > selectedRoute.availableSeats) {
+    toast.error(`Only ${selectedRoute.availableSeats} seats available`);
+    return;
+  }
+
+  setIsBooking(true);
+
+  try {
+    // Correctly nest route object as expected by backend
+    const travelDateString = travelDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+const bookingData = {
+  route: {
+    id: selectedRoute.id,
+    from: selectedRoute.from,
+    to: selectedRoute.to,
+    departureTime: `${travelDateString}T${selectedRoute.departureTime}:00`,
+    arrivalTime: `${travelDateString}T${selectedRoute.arrivalTime}:00`,
+  },
+  passengers: validPassengers.map((name, i) => ({
+    name: name.trim(),
+    age: 25,
+    gender: 'other',
+    seatNumber: `SEAT-${i + 1}`
+  })),
+  totalAmount: validPassengers.length * selectedRoute.price,
+  paymentStatus: 'pending',
+  paymentId: selectedPaymentMethod
+};
+
+
+    console.log('Booking data being sent:', bookingData);
+
+    const response = await api.createBooking(bookingData);
+
+    if (response.success) {
+      toast.success(`Successfully booked ${response.data.tickets.length} ticket(s)!`);
+      navigate('/my-tickets');
+    } else {
+      throw new Error(response.message || 'Booking failed');
     }
+  } catch (error: any) {
+    console.error('Booking error:', error);
+    toast.error(
+      error?.message ||
+      'Failed to book tickets. Please ensure all route details are correct.'
+    );
+  } finally {
+    setIsBooking(false);
+  }
+};
 
-    setIsBooking(true);
-    try {
-      // Coerce route times to ISO datetimes on the chosen date
-      const toISO = (time: string) => {
-        if (!travelDate) return time;
-        const [hour, minute] = String(time).split(':');
-        const dt = new Date(travelDate);
-        dt.setHours(Number(hour || 0), Number(minute || 0), 0, 0);
-        return dt.toISOString();
-      };
-
-      const bookingData = {
-        routeId: selectedRoute.id,
-        passengers: validPassengers.map((name, index) => ({
-          name: name.trim(),
-          age: 25, // Default age, could be made configurable
-          gender: 'other' as const,
-          seatNumber: `SEAT-${index + 1}`
-        })),
-        totalAmount: validPassengers.length * selectedRoute.price,
-        paymentStatus: 'pending',
-        paymentId: selectedPaymentMethod
-      };
-
-      const response = await api.post('/api/bookings', bookingData);
-      
-      if (response.success) {
-        toast.success(`Successfully booked ${response.data.tickets.length} ticket(s)!`);
-        navigate('/my-tickets');
-      } else {
-        throw new Error(response.message || 'Booking failed');
-      }
-    } catch (error: any) {
-      console.error('Booking error:', error);
-      toast.error(error.message || 'Failed to book tickets. Please try again.');
-    } finally {
-      setIsBooking(false);
-    }
-  };
 
   const totalAmount = passengers.filter(name => name.trim() !== '').length * selectedRoute.price;
 
@@ -161,9 +156,7 @@ export default function Booking() {
       <div className="p-6 max-w-4xl mx-auto bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-800">Complete Your Booking</h1>
-          <p className="text-slate-600 mt-2">
-            Review details and add passengers for your journey
-          </p>
+          <p className="text-slate-600 mt-2">Review details and add passengers for your journey</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -183,9 +176,11 @@ export default function Booking() {
                     <h3 className="text-xl font-semibold">
                       {selectedRoute.from} → {selectedRoute.to}
                     </h3>
-                    <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200">{selectedRoute.busType}</Badge>
+                    <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200">
+                      {selectedRoute.busType}
+                    </Badge>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center">
                       <Clock className="mr-2 h-4 w-4 text-slate-400" />
@@ -219,9 +214,9 @@ export default function Booking() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-slate-800">Passengers</CardTitle>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={addPassenger}
                     disabled={passengers.length >= 5}
                     className="border-slate-300 text-slate-700 hover:bg-slate-50"
@@ -245,7 +240,7 @@ export default function Booking() {
                         <Input
                           id={`passenger-${index}`}
                           value={passenger}
-                          onChange={(e) => updatePassenger(index, e.target.value)}
+                          onChange={e => updatePassenger(index, e.target.value)}
                           placeholder="Full name as on ID"
                           className="mt-1"
                         />
@@ -279,15 +274,12 @@ export default function Booking() {
                   <Label>Select Payment Method</Label>
                   {user?.paymentMethods?.length > 0 ? (
                     <>
-                      <Select 
-                        value={selectedPaymentMethod} 
-                        onValueChange={setSelectedPaymentMethod}
-                      >
+                      <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
                         <SelectTrigger>
                           <SelectValue placeholder="Choose payment method" />
                         </SelectTrigger>
                         <SelectContent>
-                          {user.paymentMethods.map((method) => (
+                          {user.paymentMethods.map(method => (
                             <SelectItem key={method.id} value={method.id}>
                               <div className="flex items-center space-x-3">
                                 <span>{paymentMethodLabels[method.type]}</span>
@@ -301,8 +293,8 @@ export default function Booking() {
                         </SelectContent>
                       </Select>
                       <div className="flex justify-end">
-                        <Button 
-                          variant="link" 
+                        <Button
+                          variant="link"
                           className="text-sm text-blue-600 p-0 h-auto"
                           onClick={() => setShowAddPaymentMethod(true)}
                         >
@@ -314,7 +306,7 @@ export default function Booking() {
                     <div className="space-y-4">
                       <div className="p-4 border border-dashed rounded-lg text-center">
                         <p className="text-sm text-slate-600 mb-3">No payment methods found</p>
-                        <Button 
+                        <Button
                           variant="outline"
                           onClick={() => setShowAddPaymentMethod(true)}
                           className="border-blue-200 text-blue-600 hover:bg-blue-50"
@@ -369,8 +361,8 @@ export default function Booking() {
                   </div>
                 </div>
 
-                <Button 
-                  onClick={handleBooking} 
+                <Button
+                  onClick={handleBooking}
                   disabled={isBooking || passengers.filter(name => name.trim() !== '').length === 0}
                   className="w-full bg-slate-700 hover:bg-slate-800 text-white border-0"
                   size="lg"
@@ -390,7 +382,7 @@ export default function Booking() {
       {/* Add Payment Method Dialog */}
       <Dialog open={showAddPaymentMethod} onOpenChange={setShowAddPaymentMethod}>
         <DialogContent className="sm:max-w-[425px]">
-          <AddPaymentMethod 
+          <AddPaymentMethod
             onClose={() => setShowAddPaymentMethod(false)}
             onAdd={handleAddPaymentMethod}
           />

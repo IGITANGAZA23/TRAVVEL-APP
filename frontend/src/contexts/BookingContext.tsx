@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { mockRoutes } from '@/data/mockRoutes';
+import { mockRoutes } from '@/contexts/data/mockRoutes';
 import { API_ENDPOINTS, getAuthToken } from '@/config/api';
 
 export interface Route {

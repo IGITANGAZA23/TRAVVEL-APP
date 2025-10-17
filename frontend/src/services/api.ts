@@ -20,6 +20,11 @@ class ApiService {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<T> {
+    // Ensure endpoint is a string to prevent "[object Object]" errors
+    if (typeof endpoint !== 'string') {
+      throw new Error(`Invalid endpoint: ${String(endpoint)}`);
+    }
+
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       ...this.defaultHeaders,
@@ -39,10 +44,24 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
-        const error = await this.parseError(response);
-        throw error;
+        // Read the raw response for debugging
+        let text: string;
+        try {
+          text = await response.text();
+        } catch {
+          text = response.statusText;
+        }
+        console.error(`API request failed: ${response.status} ${response.statusText}`, text);
+
+        // Try parsing JSON for better error messages
+        try {
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.message || 'API request failed');
+        } catch {
+          throw new Error(text || 'API request failed');
+        }
       }
 
       // Handle 204 No Content
@@ -52,62 +71,57 @@ class ApiService {
 
       return (await response.json()) as T;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('API request exception:', error);
       throw error;
     }
   }
 
-  private async parseError(response: Response): Promise<Error> {
-    try {
-      const errorData = await response.json();
-      return new Error(errorData.message || 'An error occurred');
-    } catch (e) {
-      return new Error(response.statusText || 'An error occurred');
-    }
-  }
-
   // HTTP Methods
-  public get<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'GET',
-    });
-  }
+public get<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  return this.request<T>(endpoint, {
+    ...options,
+    method: 'GET',
+  });
+}
 
-  public post<T>(
-    endpoint: string,
-    data: Record<string, unknown>,
-    options: RequestOptions = {}
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
+public post<T>(
+  endpoint: string,
+  data: Record<string, unknown>,
+  options: RequestOptions = {}
+): Promise<T> {
+  return this.request<T>(endpoint, {
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
 
-  public put<T>(
-    endpoint: string,
-    data: Record<string, unknown>,
-    options: RequestOptions = {}
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
+public put<T>(
+  endpoint: string,
+  data: Record<string, unknown>,
+  options: RequestOptions = {}
+): Promise<T> {
+  return this.request<T>(endpoint, {
+    ...options,
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
 
-  public delete<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'DELETE',
-    });
-  }
+public delete<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  return this.request<T>(endpoint, {
+    ...options,
+    method: 'DELETE',
+  });
+}
+
+
+
+
 
   // Route-specific methods
   public async getRoutes(): Promise<any> {
-    return this.get('/api/routes');
+    return this.get('/routes');
   }
 
   public async searchRoutes(filters: Record<string, any>): Promise<any> {
@@ -117,23 +131,40 @@ class ApiService {
         queryParams.append(key, String(value));
       }
     });
-    return this.get(`/api/routes/search?${queryParams.toString()}`);
+    return this.get(`/routes/search?${queryParams.toString()}`);
   }
 
   public async getRouteById(id: string): Promise<any> {
-    return this.get(`/api/routes/${id}`);
+    return this.get(`/routes/${id}`);
   }
 
   public async getRoutesByOriginDestination(from: string, to: string): Promise<any> {
-    return this.get(`/api/routes/from/${from}/to/${to}`);
+    return this.get(`/routes/from/${from}/to/${to}`);
   }
 
   public async getOrigins(): Promise<any> {
-    return this.get('/api/routes/origins');
+    return this.get('/routes/origins');
   }
 
   public async getDestinations(): Promise<any> {
-    return this.get('/api/routes/destinations');
+    return this.get('/routes/destinations');
+  }
+
+  // Booking-specific methods
+  public async createBooking(data: Record<string, any>): Promise<any> {
+    // Ensure endpoint is a string, prevent accidental object
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid booking data provided');
+    }
+    return this.post('/bookings', data);
+  }
+
+  public async getBookings(): Promise<any> {
+    return this.get('/bookings');
+  }
+
+  public async getBookingById(id: string): Promise<any> {
+    return this.get(`/bookings/${id}`);
   }
 }
 
