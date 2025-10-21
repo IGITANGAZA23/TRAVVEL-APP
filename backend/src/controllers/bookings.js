@@ -1,287 +1,259 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBooking = exports.updateBookingStatus = exports.getBooking = exports.getBookings = exports.createBooking = void 0;
-const express_validator_1 = require("express-validator");
-const Booking_1 = __importDefault(require("../models/Booking"));
-const Ticket_1 = __importDefault(require("../models/Ticket"));
-const availableTicketsService_1 = __importDefault(require("../services/availableTicketsService"));
-const crypto_1 = __importDefault(require("crypto"));
+const { validationResult } = require("express-validator");
+const Booking = require("../models/Booking");
+const Ticket = require("../models/Ticket");
+const availableTicketsService = require("../services/availableTicketsService");
+const crypto = require("crypto");
 
-const createBooking = async (req, res) => {
-    const errors = (0, express_validator_1.validationResult)(req);
+// @desc Create a new booking
+// @route POST /api/bookings
+// @access Private
+exports.createBooking = async (req, res) => {
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ errors: errors.array() });
     }
+
     try {
+    const {
+        route,
+        routeId: bodyRouteId,
+        passengers,
+        totalAmount,
+        paymentStatus = "pending",
+        paymentId,
+    } = req.body;
 
+    const routeId = bodyRouteId || route?.id;
+    if (!routeId) {
+        return res.status(400).json({
+        success: false,
+        message: "Route ID is required",
+        });
+    }
 
+    const foundRoute = availableTicketsService.getRouteById(routeId);
+    if (!foundRoute) {
+        return res.status(404).json({
+        success: false,
+        message: "Route not found",
+        });
+    }
 
+    if (foundRoute.availableSeats < passengers.length) {
+        return res.status(400).json({
+        success: false,
+        message: `Only ${foundRoute.availableSeats} seats available, but ${passengers.length} passengers requested`,
+        });
+    }
 
-/*
-//ORIGINAL ROUTE SEARCHING
-        const { routeId, passengers, totalAmount, paymentStatus = 'pending', paymentId, } = req.body;
-        // Validate route exists and has enough seats
-        const route = availableTicketsService_1.default.getRouteById(routeId);
-        if (!route) {
-            return res.status(404).json({
-                success: false,
-                message: 'Route not found'
-            });
-        }
-*/
-
-/*
-//NEW ROUTE SEARCHING
-const { route, passengers, totalAmount, paymentStatus = 'pending', paymentId } = req.body;
-const routeId = route?.id; // ✅ extract id from nested route
-const foundRoute = availableTicketsService_1.default.getRouteById(routeId);
-
-if (!foundRoute) {
-    return res.status(404).json({
-    success: false,
-    message: 'Route not found',
+    // ✅ Create booking linked to the current user
+    const booking = new Booking({
+        user: req.user._id,
+        route: {
+        from: foundRoute.from,
+        to: foundRoute.to,
+        departureTime: foundRoute.departureTime,
+        arrivalTime: foundRoute.arrivalTime,
+        },
+        passengers,
+        totalAmount,
+        paymentStatus,
+        paymentId,
+        routeId: foundRoute.id,
     });
-}
-*/
 
+    await booking.save();
 
-// Extract either nested route or routeId
-const { route, routeId: bodyRouteId, passengers, totalAmount, paymentStatus = 'pending', paymentId } = req.body;
-
-// Determine which route ID to use
-const routeId = bodyRouteId || route?.id;
-if (!routeId) {
-    return res.status(400).json({
-    success: false,
-    message: 'Route ID is required'
-    });
-}
-
-// Lookup the route
-const foundRoute = availableTicketsService_1.default.getRouteById(routeId);
-if (!foundRoute) {
-    return res.status(404).json({
-    success: false,
-    message: 'Route not found'
-    });
-}
-
-
-
-
-
-        if (route.availableSeats < passengers.length) {
-            return res.status(400).json({
-                success: false,
-                message: `Only ${route.availableSeats} seats available, but ${passengers.length} passengers requested`
-            });
-        }
-        // Create booking
-        const booking = new Booking_1.default({
-            user: req.user._id,
-            route: {
-                from: route.from,
-                to: route.to,
-                departureTime: route.departureTime,
-                arrivalTime: route.arrivalTime,
-            },
-            passengers,
-            totalAmount,
-            paymentStatus,
-            paymentId,
-            routeId: route.id, // Store the route ID for reference
-        });
-        await booking.save();
-        // Update available seats before creating tickets
-        const seatUpdateSuccess = availableTicketsService_1.default.updateAvailableSeats(routeId, passengers.length);
-        if (!seatUpdateSuccess) {
-            await booking.remove(); // Rollback booking if seat update fails
-            return res.status(400).json({
-                success: false,
-                message: 'Failed to reserve seats. Please try again.'
-            });
-        }
-        // Create tickets for each passenger
-        const tickets = await Promise.all(passengers.map(async (passenger, index) => {
-            const ticketNumber = `TKT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            // Create signed payload for QR code
-            const secret = process.env.QR_SECRET || 'change_me_in_env';
-            const payload = {
-                tn: ticketNumber,
-                uid: String(req.user._id),
-                // Expiration time (e.g., 7 days) to reduce risk if leaked
-                exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
-            };
-            const payloadStr = JSON.stringify(payload);
-            const signature = crypto_1.default
-                .createHmac('sha256', secret)
-                .update(payloadStr)
-                .digest('base64url');
-            const qrData = Buffer.from(JSON.stringify({ ...payload, sig: signature })).toString('base64url');
-            const ticket = new Ticket_1.default({
-                booking: booking._id,
-                user: req.user._id,
-                ticketNumber,
-                // Store signed payload (base64url) in qrCode field; frontend will render as QR
-                qrCode: qrData,
-                status: 'active',
-                journeyDetails: {
-                    from: route.from,
-                    to: route.to,
-                    departureTime: route.departureTime,
-                    arrivalTime: route.arrivalTime,
-                    seatNumber: passenger.seatNumber || `SEAT-${index + 1}`,
-                },
-                passenger: {
-                    name: passenger.name,
-                    age: passenger.age,
-                    gender: passenger.gender,
-                },
-                price: totalAmount / passengers.length, // Assuming equal price per passenger
-            });
-            await ticket.save();
-            return ticket;
-        }));
-        // Update booking with ticket references
-        booking.tickets = tickets.map((ticket) => ticket._id);
-        await booking.save();
-        res.status(201).json({
-            success: true,
-            data: {
-                booking,
-                tickets,
-                route: {
-                    id: route.id,
-                    from: route.from,
-                    to: route.to,
-                    agency: route.agency,
-                    departureTime: route.departureTime,
-                    arrivalTime: route.arrivalTime,
-                    busType: route.busType
-                }
-            },
-        });
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-exports.createBooking = createBooking;
-
-const getBookings = async (req, res) => {
-    try {
-        const bookings = await Booking_1.default.find({ user: req.user._id })
-            .sort({ createdAt: -1 })
-            .populate('tickets');
-        res.status(200).json({
-            success: true,
-            count: bookings.length,
-            data: bookings,
-        });
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-exports.getBookings = getBookings;
-
-const getBooking = async (req, res) => {
-    try {
-        const booking = await Booking_1.default.findOne({
-            _id: req.params.id,
-            user: req.user._id,
-        }).populate('tickets');
-        if (!booking) {
-            return res.status(404).json({
-                success: false,
-                message: 'Booking not found',
-            });
-        }
-        res.status(200).json({
-            success: true,
-            data: booking,
-        });
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-exports.getBooking = getBooking;
-
-const updateBookingStatus = async (req, res) => {
-    try {
-        const { status } = req.body;
-        const booking = await Booking_1.default.findOne({
-            _id: req.params.id,
-            user: req.user._id,
-        });
-        if (!booking) {
-            return res.status(404).json({
-                success: false,
-                message: 'Booking not found',
-            });
-        }
-        // Update booking status
-        booking.status = status;
-        await booking.save();
-        // If cancelling, also update associated tickets
-        if (status === 'cancelled') {
-            await Ticket_1.default.updateMany({ booking: booking._id }, { $set: { status: 'cancelled' } });
-        }
-        res.status(200).json({
-            success: true,
-            data: booking,
-        });
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-exports.updateBookingStatus = updateBookingStatus;
-
-const deleteBooking = async (req, res) => {
-    try {
-        const booking = await Booking_1.default.findOne({
-            _id: req.params.id,
-            user: req.user._id,
-        });
-        if (!booking) {
-            return res.status(404).json({
-                success: false,
-                message: 'Booking not found',
-            });
-        }
-        // Only allow deletion of pending bookings
-        if (booking.status !== 'pending') {
-            return res.status(400).json({
-                success: false,
-                message: 'Cannot delete a booking that is not in pending status',
-            });
-        }
-        // Return seats to available tickets if routeId exists
-        if (booking.routeId) {
-            const seatsToReturn = booking.passengers.length;
-            availableTicketsService_1.default.addAvailableSeats(booking.routeId, seatsToReturn);
-        }
-        // Delete associated tickets
-        await Ticket_1.default.deleteMany({ booking: booking._id });
-        // Delete booking
+    // Update available seats
+    const seatUpdateSuccess = availableTicketsService.updateAvailableSeats(routeId, passengers.length);
+    if (!seatUpdateSuccess) {
         await booking.remove();
-        res.status(200).json({
-            success: true,
-            data: {},
+        return res.status(400).json({
+        success: false,
+        message: "Failed to reserve seats. Please try again.",
         });
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
+
+    // ✅ Create tickets owned by the same user
+    const tickets = await Promise.all(
+        passengers.map(async (passenger, index) => {
+        const ticketNumber = `TKT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const secret = process.env.QR_SECRET || "change_me_in_env";
+        const payload = {
+            tn: ticketNumber,
+            uid: String(req.user._id),
+          exp: Date.now() + 7 * 24 * 60 * 60 * 1000, // expires in 7 days
+        };
+        const payloadStr = JSON.stringify(payload);
+        const signature = crypto.createHmac("sha256", secret).update(payloadStr).digest("base64url");
+        const qrData = Buffer.from(JSON.stringify({ ...payload, sig: signature })).toString("base64url");
+
+        const ticket = new Ticket({
+            booking: booking._id,
+            user: req.user._id,
+            ticketNumber,
+            qrCode: qrData,
+            status: "active",
+            journeyDetails: {
+            from: foundRoute.from,
+            to: foundRoute.to,
+            departureTime: foundRoute.departureTime,
+            arrivalTime: foundRoute.arrivalTime,
+            seatNumber: passenger.seatNumber || `SEAT-${index + 1}`,
+            },
+            passenger: {
+            name: passenger.name,
+            age: passenger.age,
+            gender: passenger.gender,
+            },
+            price: totalAmount / passengers.length,
+        });
+
+        await ticket.save();
+        return ticket;
+        })
+    );
+
+    booking.tickets = tickets.map((t) => t._id);
+    await booking.save();
+
+    res.status(201).json({
+        success: true,
+        data: {
+        booking,
+        tickets,
+            route: {
+            id: foundRoute.id,
+            from: foundRoute.from,
+            to: foundRoute.to,
+            agency: foundRoute.agency,
+            departureTime: foundRoute.departureTime,
+            arrivalTime: foundRoute.arrivalTime,
+            busType: foundRoute.busType,
+        },
+        },
+    });
+    } catch (err) {
+    console.error("Booking creation failed:", err);
+    res.status(500).json({ message: "Server Error" });
     }
 };
-exports.deleteBooking = deleteBooking;
+
+// @desc Get all bookings for logged-in user
+// @route GET /api/bookings
+// @access Private
+exports.getBookings = async (req, res) => {
+    try {
+    const bookings = await Booking.find({ user: req.user._id })
+        .sort({ createdAt: -1 })
+        .populate("tickets");
+
+    res.status(200).json({
+        success: true,
+        count: bookings.length,
+        data: bookings,
+    });
+    } catch (err) {
+    console.error("Error fetching bookings:", err);
+    res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// @desc Get single booking
+// @route GET /api/bookings/:id
+// @access Private
+exports.getBooking = async (req, res) => {
+    try {
+    const booking = await Booking.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+    }).populate("tickets");
+
+    if (!booking) {
+        return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        data: booking,
+    });
+    } catch (err) {
+    console.error("Error fetching booking:", err);
+    res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// @desc Update booking status (cancel, etc.)
+// @route PUT /api/bookings/:id/status
+// @access Private
+exports.updateBookingStatus = async (req, res) => {
+    try {
+    const { status } = req.body;
+    const booking = await Booking.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+    });
+
+    if (!booking) {
+        return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+        });
+    }
+
+    booking.status = status;
+    await booking.save();
+
+    if (status === "cancelled") {
+        await Ticket.updateMany({ booking: booking._id }, { $set: { status: "cancelled" } });
+    }
+
+    res.status(200).json({ success: true, data: booking });
+    } catch (err) {
+    console.error("Error updating booking:", err);
+    res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// @desc Delete a pending booking
+// @route DELETE /api/bookings/:id
+// @access Private
+exports.deleteBooking = async (req, res) => {
+    try {
+    const booking = await Booking.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+    });
+
+    if (!booking) {
+        return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+        });
+    }
+
+    if (booking.status !== "pending") {
+        return res.status(400).json({
+        success: false,
+        message: "Cannot delete a booking that is not pending",
+        });
+    }
+
+    if (booking.routeId) {
+        const seatsToReturn = booking.passengers.length;
+        availableTicketsService.addAvailableSeats(booking.routeId, seatsToReturn);
+    }
+
+    await Ticket.deleteMany({ booking: booking._id });
+    await booking.remove();
+
+    res.status(200).json({ success: true, data: {} });
+    } catch (err) {
+    console.error("Error deleting booking:", err);
+    res.status(500).json({ message: "Server Error" });
+    } 
+};

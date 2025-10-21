@@ -1,36 +1,94 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const express_validator_1 = require("express-validator");
-const tickets_1 = require("../controllers/tickets");
-const auth_1 = require("../middleware/auth");
-const router = (0, express_1.Router)();
 
-// All routes are protected
-router.use(auth_1.protect);
+const { Router } = require("express");
+const { body, param, query } = require("express-validator");
+const {
+  getTickets,
+  getTicket,
+  verifyTicket,
+  scanTicket,
+  updateTicketStatus,
+} = require("../controllers/tickets");
+const { protect, authorize } = require("../middleware/auth");
 
-// Get all tickets for the logged-in user
-router.get('/', [
-    (0, express_validator_1.query)('status').optional().isIn(['active', 'used', 'cancelled']),
-], tickets_1.getTickets);
+const router = Router();
 
-// **Move verify above /:id**
-router.get('/verify/:ticketNumber', [
-    (0, express_validator_1.param)('ticketNumber', 'Ticket number is required').not().isEmpty(),
-], (0, auth_1.authorize)('admin', 'staff'), tickets_1.verifyTicket);
+// ✅ All routes are protected — ensures req.user is available
+router.use(protect);
 
-// Scan ticket via signed QR payload (for staff/admin)
-router.post('/scan', (0, auth_1.authorize)('admin', 'staff'), tickets_1.scanTicket);
+/**
+ * @route   GET /api/tickets
+ * @desc    Get all tickets for the logged-in user
+ * @access  Private
+ */
+router.get(
+  "/",
+  [
+    query("status")
+      .optional()
+      .isIn(["active", "used", "cancelled"])
+      .withMessage("Invalid ticket status filter"),
+  ],
+  getTickets
+);
 
-// Get a single ticket
-router.get('/:id', [
-    (0, express_validator_1.param)('id', 'Please provide a valid ticket ID').isMongoId(),
-], tickets_1.getTicket);
+/**
+ * @route   GET /api/tickets/verify/:ticketNumber
+ * @desc    Verify a ticket (for staff/admin scanning or verification)
+ * @access  Private (Admin/Staff)
+ * @note    Must appear above '/:id' to avoid route conflict
+ */
+router.get(
+  "/verify/:ticketNumber",
+  [
+    param("ticketNumber", "Ticket number is required")
+      .notEmpty()
+      .isString()
+      .withMessage("Ticket number must be a string"),
+  ],
+  authorize("admin", "staff"),
+  verifyTicket
+);
 
-// Update ticket status
-router.put('/:id/status', [
-    (0, express_validator_1.param)('id', 'Please provide a valid ticket ID').isMongoId(),
-    (0, express_validator_1.body)('status', 'Status is required').isIn(['active', 'used', 'cancelled']),
-], tickets_1.updateTicketStatus);
+/**
+ * @route   POST /api/tickets/scan
+ * @desc    Scan a ticket using signed QR payload (for staff/admin)
+ * @access  Private (Admin/Staff)
+ */
+router.post("/scan", authorize("admin", "staff"), scanTicket);
+
+/**
+ * @route   GET /api/tickets/:id
+ * @desc    Get a single ticket for the logged-in user
+ * @access  Private
+ */
+router.get(
+  "/:id",
+  [
+    param("id", "Please provide a valid ticket ID")
+      .isMongoId()
+      .withMessage("Invalid MongoDB ID format"),
+  ],
+  getTicket
+);
+
+/**
+ * @route   PUT /api/tickets/:id/status
+ * @desc    Update a ticket’s status (active, used, or cancelled)
+ * @access  Private (User or Admin/Staff)
+ */
+router.put(
+  "/:id/status",
+  [
+    param("id", "Please provide a valid ticket ID")
+      .isMongoId()
+      .withMessage("Invalid MongoDB ID format"),
+    body("status", "Status is required")
+      .isIn(["active", "used", "cancelled"])
+      .withMessage("Status must be one of: active, used, cancelled"),
+  ],
+  updateTicketStatus
+);
 
 exports.default = router;
