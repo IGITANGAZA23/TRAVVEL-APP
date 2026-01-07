@@ -8,6 +8,8 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const cors_1 = __importDefault(require("cors"));
 const morgan_1 = __importDefault(require("morgan"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 // Load environment variables
 dotenv_1.default.config();
 // Import routes
@@ -35,6 +37,11 @@ const corsOptions = {
 app.use((0, cors_1.default)(corsOptions));
 app.options('*', (0, cors_1.default)(corsOptions)); // Enable preflight for all routes
 app.use((0, morgan_1.default)('dev'));
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'TRAVVEL API Documentation'
+}));
 // Connect to MongoDB
 const connectDB = async () => {
     try {
@@ -67,6 +74,27 @@ app.use('/api/tickets', tickets_1.default);
 app.use('/api/appeals', appeals_1.default);
 app.use('/api/routes', routes_1.default);
 // Health check endpoint
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     summary: Health check endpoint
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Server is running
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 message:
+ *                   type: string
+ *                   example: Server is running
+ */
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });
 });

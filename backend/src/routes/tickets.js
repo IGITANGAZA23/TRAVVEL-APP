@@ -18,9 +18,37 @@ const router = Router();
 router.use(protect);
 
 /**
- * @route   GET /api/tickets
- * @desc    Get all tickets for the logged-in user
- * @access  Private
+ * @swagger
+ * /api/tickets:
+ *   get:
+ *     summary: Get all tickets for the logged-in user
+ *     tags: [Tickets]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, used, cancelled]
+ *         description: Filter tickets by status
+ *     responses:
+ *       200:
+ *         description: List of user tickets
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Ticket'
+ *       401:
+ *         description: Unauthorized
+ *         $ref: '#/components/schemas/Error'
  */
 router.get(
   "/",
@@ -34,10 +62,38 @@ router.get(
 );
 
 /**
- * @route   GET /api/tickets/verify/:ticketNumber
- * @desc    Verify a ticket (for staff/admin scanning or verification)
- * @access  Private (Admin/Staff)
- * @note    Must appear above '/:id' to avoid route conflict
+ * @swagger
+ * /api/tickets/verify/{ticketNumber}:
+ *   get:
+ *     summary: Verify a ticket (Admin/Staff only)
+ *     tags: [Tickets]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: ticketNumber
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Ticket number to verify
+ *     responses:
+ *       200:
+ *         description: Ticket verification details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Ticket'
+ *       404:
+ *         description: Ticket not found
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Forbidden - Admin/Staff access required
+ *         $ref: '#/components/schemas/Error'
  */
 router.get(
   "/verify/:ticketNumber",
@@ -52,16 +108,79 @@ router.get(
 );
 
 /**
- * @route   POST /api/tickets/scan
- * @desc    Scan a ticket using signed QR payload (for staff/admin)
- * @access  Private (Admin/Staff)
+ * @swagger
+ * /api/tickets/scan:
+ *   post:
+ *     summary: Scan a ticket using QR code (Admin/Staff only)
+ *     tags: [Tickets]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - qrData
+ *             properties:
+ *               qrData:
+ *                 type: string
+ *                 description: QR code data to scan
+ *     responses:
+ *       200:
+ *         description: Ticket scanned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Ticket'
+ *       400:
+ *         description: Invalid QR data
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Forbidden - Admin/Staff access required
+ *         $ref: '#/components/schemas/Error'
  */
 router.post("/scan", authorize("admin", "staff"), scanTicket);
 
 /**
- * @route   GET /api/tickets/:id
- * @desc    Get a single ticket for the logged-in user
- * @access  Private
+ * @swagger
+ * /api/tickets/{id}:
+ *   get:
+ *     summary: Get a single ticket by ID
+ *     tags: [Tickets]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Ticket ID
+ *     responses:
+ *       200:
+ *         description: Ticket details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Ticket'
+ *       404:
+ *         description: Ticket not found
+ *         $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         $ref: '#/components/schemas/Error'
  */
 router.get(
   "/:id",
@@ -74,9 +193,51 @@ router.get(
 );
 
 /**
- * @route   PUT /api/tickets/:id/status
- * @desc    Update a ticket’s status (active, used, or cancelled)
- * @access  Private (User or Admin/Staff)
+ * @swagger
+ * /api/tickets/{id}/status:
+ *   put:
+ *     summary: Update ticket status
+ *     tags: [Tickets]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Ticket ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, used, cancelled]
+ *                 example: "used"
+ *     responses:
+ *       200:
+ *         description: Ticket status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Ticket'
+ *       400:
+ *         description: Invalid status
+ *         $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         $ref: '#/components/schemas/Error'
  */
 router.put(
   "/:id/status",

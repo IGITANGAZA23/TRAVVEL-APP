@@ -17,9 +17,91 @@ const router = (0, express_1.Router)();
 router.use(protect);
 
 /**
- * @route   POST /api/bookings
- * @desc    Create a new booking for the logged-in user
- * @access  Private
+ * @swagger
+ * /api/bookings:
+ *   post:
+ *     summary: Create a new booking
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - passengers
+ *               - totalAmount
+ *             properties:
+ *               routeId:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439011"
+ *               route:
+ *                 type: object
+ *                 properties:
+ *                   from:
+ *                     type: string
+ *                     example: "Kigali"
+ *                   to:
+ *                     type: string
+ *                     example: "Nyamasheke"
+ *                   departureTime:
+ *                     type: string
+ *                     format: date-time
+ *                   arrivalTime:
+ *                     type: string
+ *                     format: date-time
+ *               passengers:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - name
+ *                     - age
+ *                     - gender
+ *                     - seatNumber
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: "John Doe"
+ *                     age:
+ *                       type: number
+ *                       minimum: 1
+ *                       maximum: 120
+ *                       example: 30
+ *                     gender:
+ *                       type: string
+ *                       enum: [male, female, other]
+ *                       example: "male"
+ *                     seatNumber:
+ *                       type: string
+ *                       example: "A1"
+ *               totalAmount:
+ *                 type: number
+ *                 example: 6000
+ *               paymentStatus:
+ *                 type: string
+ *                 enum: [pending, paid, refunded, failed]
+ *                 example: "pending"
+ *     responses:
+ *       201:
+ *         description: Booking created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *       400:
+ *         description: Validation error or insufficient seats
+ *         $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         $ref: '#/components/schemas/Error'
  */
 router.post(
   "/",
@@ -68,16 +150,66 @@ router.post(
 );
 
 /**
- * @route   GET /api/bookings
- * @desc    Get all bookings for the logged-in user
- * @access  Private
+ * @swagger
+ * /api/bookings:
+ *   get:
+ *     summary: Get all bookings for the logged-in user
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user bookings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Booking'
+ *       401:
+ *         description: Unauthorized
+ *         $ref: '#/components/schemas/Error'
  */
 router.get("/", getBookings);
 
 /**
- * @route   GET /api/bookings/:id
- * @desc    Get details of a specific booking belonging to the user
- * @access  Private
+ * @swagger
+ * /api/bookings/{id}:
+ *   get:
+ *     summary: Get a specific booking by ID
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Booking details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *       404:
+ *         description: Booking not found
+ *         $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         $ref: '#/components/schemas/Error'
  */
 router.get(
   "/:id",
@@ -86,9 +218,51 @@ router.get(
 );
 
 /**
- * @route   PUT /api/bookings/:id/status
- * @desc    Update the booking status (user or admin)
- * @access  Private
+ * @swagger
+ * /api/bookings/{id}/status:
+ *   put:
+ *     summary: Update booking status
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, confirmed, cancelled, completed]
+ *                 example: "confirmed"
+ *     responses:
+ *       200:
+ *         description: Booking status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Booking'
+ *       400:
+ *         description: Invalid status
+ *         $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         $ref: '#/components/schemas/Error'
  */
 router.put(
   "/:id/status",
@@ -105,9 +279,38 @@ router.put(
 );
 
 /**
- * @route   DELETE /api/bookings/:id
- * @desc    Delete a user’s booking
- * @access  Private
+ * @swagger
+ * /api/bookings/{id}:
+ *   delete:
+ *     summary: Delete a booking
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Booking deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Booking not found
+ *         $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         $ref: '#/components/schemas/Error'
  */
 router.delete(
   "/:id",
