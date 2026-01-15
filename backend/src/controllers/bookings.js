@@ -1,10 +1,16 @@
 "use strict";
 const { validationResult } = require("express-validator");
-const Booking = require("../models/Booking");
-const Ticket = require("../models/Ticket");
-// availableTicketsService is transpiled with a default export; support both require() shapes
+
+// Models may be transpiled as ES module default exports; normalize them.
+const BookingModelImport = require("../models/Booking");
+const TicketModelImport = require("../models/Ticket");
+const Booking = BookingModelImport?.default || BookingModelImport;
+const Ticket = TicketModelImport?.default || TicketModelImport;
+
+// Services
 const availableTicketsServiceImport = require("../services/availableTicketsService");
 const availableTicketsService = availableTicketsServiceImport?.default || availableTicketsServiceImport;
+
 const crypto = require("crypto");
 
 // @desc Create a new booking
@@ -42,6 +48,42 @@ exports.createBooking = async (req, res) => {
         });
     }
 
+    const toValidDate = (value, fallbackDate) => {
+        if (!value)
+            return null;
+        if (value instanceof Date && !Number.isNaN(value.getTime()))
+            return value;
+        const str = String(value);
+        // ISO-ish datetime
+        const parsed = new Date(str);
+        if (!Number.isNaN(parsed.getTime()))
+            return parsed;
+        // HH:mm (or HH:mm:ss) -> apply to fallbackDate (or today)
+        const timeMatch = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+        if (timeMatch) {
+            const base = fallbackDate instanceof Date && !Number.isNaN(fallbackDate.getTime())
+                ? new Date(fallbackDate)
+                : new Date();
+            const hh = parseInt(timeMatch[1], 10);
+            const mm = parseInt(timeMatch[2], 10);
+            const ss = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
+            base.setHours(hh, mm, ss, 0);
+            return base;
+        }
+        return null;
+    };
+
+    // Prefer client-provided ISO datetimes when present; otherwise fall back to route data.
+    const baseDate = toValidDate(route?.departureTime, new Date()) || new Date();
+    const departureTime = toValidDate(route?.departureTime || foundRoute.departureTime, baseDate);
+    const arrivalTime = toValidDate(route?.arrivalTime || foundRoute.arrivalTime, baseDate);
+    if (!departureTime || !arrivalTime) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid departureTime/arrivalTime. Provide ISO datetime (recommended) or HH:mm.",
+        });
+    }
+
     if (foundRoute.availableSeats < passengers.length) {
         return res.status(400).json({
         success: false,
@@ -55,8 +97,8 @@ exports.createBooking = async (req, res) => {
         route: {
         from: foundRoute.from,
         to: foundRoute.to,
-        departureTime: foundRoute.departureTime,
-        arrivalTime: foundRoute.arrivalTime,
+        departureTime,
+        arrivalTime,
         },
         passengers,
         totalAmount,
@@ -100,8 +142,8 @@ exports.createBooking = async (req, res) => {
             journeyDetails: {
             from: foundRoute.from,
             to: foundRoute.to,
-            departureTime: foundRoute.departureTime,
-            arrivalTime: foundRoute.arrivalTime,
+            departureTime,
+            arrivalTime,
             seatNumber: passenger.seatNumber || `SEAT-${index + 1}`,
             },
             passenger: {
