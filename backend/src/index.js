@@ -22,7 +22,19 @@ const routes_1 = __importDefault(require("./routes/routes"));
 const Route_1 = __importDefault(require("./models/Route"));
 // Create Express app
 const app = (0, express_1.default)();
-const PORT = parseInt(process.env.PORT || '5000', 10);
+const getPortFromArgs = () => {
+    const args = process.argv || [];
+    const portFlagIndex = args.findIndex((a) => a === '--port' || a === '-p');
+    if (portFlagIndex !== -1) {
+        const raw = args[portFlagIndex + 1];
+        const parsed = parseInt(String(raw), 10);
+        if (!Number.isNaN(parsed)) {
+            return parsed;
+        }
+    }
+    return undefined;
+};
+const PORT = parseInt(process.env.PORT || String(getPortFromArgs() || 5000), 10);
 // Middleware
 app.use(express_1.default.json());
 const corsOptions = {

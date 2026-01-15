@@ -2,7 +2,9 @@
 const { validationResult } = require("express-validator");
 const Booking = require("../models/Booking");
 const Ticket = require("../models/Ticket");
-const availableTicketsService = require("../services/availableTicketsService");
+// availableTicketsService is transpiled with a default export; support both require() shapes
+const availableTicketsServiceImport = require("../services/availableTicketsService");
+const availableTicketsService = availableTicketsServiceImport?.default || availableTicketsServiceImport;
 const crypto = require("crypto");
 
 // @desc Create a new booking

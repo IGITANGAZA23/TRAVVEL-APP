@@ -1,4 +1,5 @@
 import { API_CONFIG } from '@/config';
+import { getAuthToken } from '@/config/api';
 
 interface RequestOptions extends RequestInit {
   headers?: Record<string, string>;
@@ -26,13 +27,13 @@ class ApiService {
     }
 
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = {
+    const headers: Record<string, string> = {
       ...this.defaultHeaders,
-      ...options.headers,
+      ...(options.headers || {}),
     };
 
-    // Add auth token if available
-    const token = localStorage.getItem('travvel_auth_token');
+    // Add auth token if available (use shared helper so key stays consistent)
+    const token = getAuthToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
