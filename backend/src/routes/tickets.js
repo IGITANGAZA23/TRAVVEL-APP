@@ -55,7 +55,7 @@ router.get(
   [
     query("status")
       .optional()
-      .isIn(["active", "used", "cancelled"])
+      .isIn(["active", "used", "expired", "cancelled"])
       .withMessage("Invalid ticket status filter"),
   ],
   getTickets
@@ -246,7 +246,7 @@ router.put(
       .isMongoId()
       .withMessage("Invalid MongoDB ID format"),
     body("status", "Status is required")
-      .isIn(["active", "used", "cancelled"])
+      .isIn(["active", "used", "expired", "cancelled"])
       .withMessage("Status must be one of: active, used, cancelled"),
   ],
   updateTicketStatus

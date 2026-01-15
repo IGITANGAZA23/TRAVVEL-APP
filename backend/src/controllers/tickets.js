@@ -9,6 +9,17 @@ const crypto = require("crypto");
 exports.getTickets = async (req, res) => {
   try {
     const { status } = req.query;
+    // Auto-expire: if departureTime is in the past and ticket is still active, mark as expired.
+    // This keeps DB truth consistent while still allowing UI to do time-based grouping.
+    const now = new Date();
+    await Ticket.updateMany({
+      user: req.user._id,
+      status: "active",
+      "journeyDetails.departureTime": { $lt: now },
+    }, {
+      $set: { status: "expired" },
+    });
+
     const query = { user: req.user._id };
     if (status) query.status = status;
 
@@ -85,12 +96,15 @@ exports.scanTicket = async (req, res) => {
 
     const today = new Date();
     const tDate = new Date(ticket.journeyDetails.departureTime);
+    // If trip is not today anymore, consider it expired (can't be used/scanned).
     if (
       tDate.getDate() !== today.getDate() ||
       tDate.getMonth() !== today.getMonth() ||
       tDate.getFullYear() !== today.getFullYear()
     ) {
-      return res.status(400).json({ success: false, message: "Ticket not valid for today" });
+      ticket.status = "expired";
+      await ticket.save();
+      return res.status(400).json({ success: false, message: "Ticket expired" });
     }
 
     ticket.status = "used";
@@ -152,7 +166,9 @@ exports.verifyTicket = async (req, res) => {
       tDate.getMonth() !== today.getMonth() ||
       tDate.getFullYear() !== today.getFullYear()
     ) {
-      return res.status(400).json({ success: false, message: "Ticket not valid for today" });
+      ticket.status = "expired";
+      await ticket.save();
+      return res.status(400).json({ success: false, message: "Ticket expired" });
     }
 
     ticket.status = "used";

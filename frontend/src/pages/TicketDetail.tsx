@@ -1,27 +1,122 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useBooking } from '@/contexts/BookingContext';
 import Layout from '@/components/Layout';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { ArrowLeft, Clock, MapPin, Bus, User, Calendar, Phone } from 'lucide-react';
 import { format } from 'date-fns';
+import { API_ENDPOINTS, getAuthToken } from '@/config/api';
+
+interface TicketDetailType {
+  id: string;
+  journeyDetails: {
+    from: string;
+    to: string;
+    departureTime: string;
+    arrivalTime: string;
+    seatNumber: string;
+  };
+  passenger: {
+    name: string;
+    age: number;
+    gender: string;
+  };
+  status: 'active' | 'used' | 'expired' | 'cancelled';
+  qrCode: string;
+  price: number;
+  createdAt: string;
+}
 
 export default function TicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getUserTickets } = useBooking();
-  
-  const tickets = getUserTickets();
-  const ticket = tickets.find(t => t.id === id || t._id === id);
+  const [ticket, setTicket] = useState<TicketDetailType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!ticket) {
+  useEffect(() => {
+    const fetchTicket = async () => {
+      if (!id) {
+        setError('Missing ticket id');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const url = API_ENDPOINTS.TICKETS.ONE(id);
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError('Ticket not found');
+          } else if (response.status === 401) {
+            setError('You must be logged in to view this ticket');
+          } else {
+            setError('Failed to load ticket');
+          }
+          setLoading(false);
+          return;
+        }
+
+        const payload = await response.json();
+        const t = payload?.data;
+        const mapped: TicketDetailType = {
+          id: String(t._id),
+          journeyDetails: {
+            from: t.journeyDetails?.from,
+            to: t.journeyDetails?.to,
+            departureTime: t.journeyDetails?.departureTime,
+            arrivalTime: t.journeyDetails?.arrivalTime,
+            seatNumber: t.journeyDetails?.seatNumber,
+          },
+          passenger: {
+            name: t.passenger?.name,
+            age: t.passenger?.age,
+            gender: t.passenger?.gender,
+          },
+          status: t.status,
+          qrCode: t.qrCode,
+          price: Number(t.price || 0),
+          createdAt: t.createdAt,
+        };
+
+        setTicket(mapped);
+      } catch (err) {
+        console.error('Error fetching ticket detail:', err);
+        setError('Failed to load ticket');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTicket();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="p-6 text-center">
+          <p className="text-gray-600">Loading ticket...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!ticket || error) {
     return (
       <Layout>
         <div className="p-6 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Ticket Not Found</h1>
+          {error && <p className="text-gray-600 mb-4">{error}</p>}
           <Button onClick={() => navigate('/my-tickets')}>
             Back to My Tickets
           </Button>
@@ -35,6 +130,8 @@ export default function TicketDetail() {
       case 'active':
         return 'bg-green-100 text-green-800';
       case 'used':
+        return 'bg-gray-100 text-gray-800';
+      case 'expired':
         return 'bg-gray-100 text-gray-800';
       case 'appealed':
         return 'bg-orange-100 text-orange-800';
@@ -85,12 +182,9 @@ export default function TicketDetail() {
               <CardContent className="space-y-4">
                 <div>
                   <h3 className="text-xl font-semibold mb-2">
-                    {ticket.route?.from ?? 'Unknown'} → {ticket.route?.to ?? 'Unknown'}
+                    {ticket.journeyDetails?.from ?? 'Unknown'} → {ticket.journeyDetails?.to ?? 'Unknown'}
                   </h3>
-                  <p className="text-gray-600">{ticket.route?.agency ?? 'Unknown Agency'}</p>
-                  <Badge variant="secondary" className="mt-2">
-                    {ticket.route?.busType ?? 'Standard'}
-                  </Badge>
+                  <p className="text-gray-600">Bus ticket</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -98,14 +192,22 @@ export default function TicketDetail() {
                     <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <p className="font-medium">Departure</p>
-                      <p className="text-gray-600">{ticket.route?.departureTime ?? 'N/A'}</p>
+                      <p className="text-gray-600">
+                        {ticket.journeyDetails?.departureTime
+                          ? new Date(ticket.journeyDetails.departureTime).toLocaleString()
+                          : 'N/A'}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
                     <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <p className="font-medium">Arrival</p>
-                      <p className="text-gray-600">{ticket.route?.arrivalTime ?? 'N/A'}</p>
+                      <p className="text-gray-600">
+                        {ticket.journeyDetails?.arrivalTime
+                          ? new Date(ticket.journeyDetails.arrivalTime).toLocaleString()
+                          : 'N/A'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -125,14 +227,14 @@ export default function TicketDetail() {
                   <User className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="font-medium">Passenger Name</p>
-                    <p className="text-gray-600">{ticket.passengerName ?? 'Unknown'}</p>
+                    <p className="text-gray-600">{ticket.passenger?.name ?? 'Unknown'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <MapPin className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="font-medium">Seat Number</p>
-                    <p className="text-gray-600">{ticket.seatNumber ?? 'N/A'}</p>
+                      <p className="text-gray-600">{ticket.journeyDetails?.seatNumber ?? 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -140,7 +242,7 @@ export default function TicketDetail() {
                   <div>
                     <p className="font-medium">Booking Date</p>
                     <p className="text-gray-600">
-                      {ticket.bookingDate ? format(new Date(ticket.bookingDate), 'MMMM dd, yyyy') : 'N/A'}
+                      {ticket.createdAt ? format(new Date(ticket.createdAt), 'MMMM dd, yyyy') : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -156,7 +258,7 @@ export default function TicketDetail() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Ticket Price:</span>
-                    <span className="font-medium">RWF {ticket.route?.price?.toLocaleString() ?? '0'}</span>
+                    <span className="font-medium">RWF {ticket.price.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Booking ID:</span>
@@ -201,7 +303,7 @@ export default function TicketDetail() {
                   <h4 className="font-medium">Need Help?</h4>
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
                     <Phone className="h-4 w-4" />
-                    <span>Contact agency: {ticket.route?.agency ?? 'Unknown Agency'}</span>
+                    <span>Contact agency: Customer Support</span>
                   </div>
                 </div>
               </CardContent>

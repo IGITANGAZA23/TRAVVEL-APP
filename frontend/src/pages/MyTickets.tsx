@@ -25,9 +25,10 @@ interface TicketType {
   passengerName: string;
   seatNumber: string;
   bookingDate: string;
-  status: 'active' | 'used' | 'cancelled' | 'appealed';
+  status: 'active' | 'used' | 'expired' | 'cancelled' | 'appealed';
   appealable: boolean;
   appealStatus?: 'pending' | 'in_review' | 'resolved' | 'rejected';
+  _departureTimeISO?: string;
 }
 
 export default function MyTickets() {
@@ -72,7 +73,8 @@ export default function MyTickets() {
           seatNumber: t.journeyDetails?.seatNumber,
           bookingDate: t.createdAt,
           status: t.status,
-          appealable: t.status === 'active'
+          appealable: t.status === 'active',
+          _departureTimeISO: t.journeyDetails?.departureTime
         }));
         setTickets(mapped);
       } catch (error) {
@@ -88,8 +90,13 @@ export default function MyTickets() {
     }
   }, [user]);
   
-  const activeTickets = tickets.filter(t => t.status === 'active');
-  const usedTickets = tickets.filter(t => t.status === 'used');
+  const isPast = (t: TicketType) => {
+    const dt = t._departureTimeISO ? new Date(t._departureTimeISO) : null;
+    return dt ? dt.getTime() < Date.now() : false;
+  };
+
+  const activeTickets = tickets.filter(t => t.status === 'active' && !isPast(t));
+  const usedTickets = tickets.filter(t => t.status === 'used' || t.status === 'expired' || t.status === 'cancelled' || (t.status === 'active' && isPast(t)));
   const appealedTickets = tickets.filter(t => t.status === 'appealed' || t.appealStatus);
   
   const handleAppealClick = (ticket: TicketType) => {
@@ -115,6 +122,8 @@ export default function MyTickets() {
       case 'active':
         return 'bg-green-100 text-green-800';
       case 'used':
+        return 'bg-gray-100 text-gray-800';
+      case 'expired':
         return 'bg-gray-100 text-gray-800';
       case 'appealed':
         return 'bg-orange-100 text-orange-800';

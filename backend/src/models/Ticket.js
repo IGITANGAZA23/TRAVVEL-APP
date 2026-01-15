@@ -57,7 +57,7 @@ const TicketSchema = new mongoose_1.Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'used', 'cancelled'],
+        enum: ['active', 'used', 'expired', 'cancelled'],
         default: 'active',
     },
     journeyDetails: {
