@@ -23,7 +23,7 @@ interface TicketDetailType {
     age: number;
     gender: string;
   };
-  status: 'active' | 'used' | 'expired' | 'cancelled';
+  status: 'active' | 'used' | 'cancelled';
   qrCode: string;
   price: number;
   createdAt: string;
@@ -83,7 +83,7 @@ export default function TicketDetail() {
             age: t.passenger?.age,
             gender: t.passenger?.gender,
           },
-          status: t.status,
+          status: t.status === 'expired' ? 'used' : t.status,
           qrCode: t.qrCode,
           price: Number(t.price || 0),
           createdAt: t.createdAt,
