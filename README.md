@@ -1,0 +1,1 @@
+The TRAVVEL App is a digital platform designed to simplify transportation services. It allows users to book tickets online, schedule their travel plans, submit appeals, and access other essential transport-related services—all in one place.
