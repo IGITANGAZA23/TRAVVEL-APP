@@ -1,5 +1,6 @@
 "use strict";
-const Ticket = require("../models/Ticket");
+const TicketModule = require("../models/Ticket");
+const Ticket = TicketModule.default || TicketModule;
 const crypto = require("crypto");
 
 // @desc Get all tickets for logged-in user
